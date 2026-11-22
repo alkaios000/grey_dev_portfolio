@@ -148,7 +148,7 @@
                     data-pgr-header-title
                     class="font-display text-lg font-semibold leading-tight tracking-[0.28em] text-slate-900 transition-all duration-200 dark:text-zinc-100 sm:text-xl lg:text-2xl"
                 >
-                    DOMAINS
+                    PROJECT
                 </p>
                 <p class="mt-0.5 font-tech text-[10px] font-semibold tracking-[0.42em] text-blue-500 dark:text-zinc-400">
                     GREY_DEV

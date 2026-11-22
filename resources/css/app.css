@@ -394,18 +394,414 @@
     clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
 }
 
-/* Diagonal split panels untuk section DOMAINS */
+/* ==========================================================================
+   Section 02 (PROJECT): PGR Sliding Diagonal Divider + Carousel Miring
+   Pembatas miring bergeser halus via GPU translate3d (split 50/50 -> geser kanan/kiri)
+   ========================================================================== */
+
+.pgr-project-stage {
+    container-type: inline-size;
+    --split-tx: 36cqw;
+}
+
+/* Default visibility states (desktop & mobile) */
+.pgr-expanded-released,
+.pgr-expanded-unreleased {
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 380ms ease,
+        transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pgr-expanded-released {
+    transform: translate3d(-24px, 0, 0);
+}
+
+.pgr-expanded-unreleased {
+    transform: translate3d(24px, 0, 0);
+}
+
+.pgr-split-trigger-left,
+.pgr-split-trigger-right {
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+        opacity 300ms ease,
+        transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pgr-wedge-released,
+.pgr-wedge-unreleased {
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity 340ms ease,
+        transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pgr-wedge-released {
+    transform: translate3d(-12px, -8px, 0);
+}
+
+.pgr-wedge-unreleased {
+    transform: translate3d(12px, 8px, 0);
+}
+
+/* Pastikan child kartu carousel / tombol yang sedang tersembunyi TIDAK PERNAH mencegat klik/hover */
+.pgr-project-stage:not([data-mode='released']) .pgr-expanded-released,
+.pgr-project-stage:not([data-mode='released']) .pgr-expanded-released * {
+    pointer-events: none !important;
+}
+
+.pgr-project-stage:not([data-mode='unreleased']) .pgr-expanded-unreleased,
+.pgr-project-stage:not([data-mode='unreleased']) .pgr-expanded-unreleased * {
+    pointer-events: none !important;
+}
+
+.pgr-project-stage:not([data-mode='split']) .pgr-split-trigger-left,
+.pgr-project-stage:not([data-mode='split']) .pgr-split-trigger-left *,
+.pgr-project-stage:not([data-mode='split']) .pgr-split-trigger-right,
+.pgr-project-stage:not([data-mode='split']) .pgr-split-trigger-right * {
+    pointer-events: none !important;
+}
+
+.pgr-project-stage:not([data-mode='unreleased']) .pgr-wedge-released,
+.pgr-project-stage:not([data-mode='unreleased']) .pgr-wedge-released * {
+    pointer-events: none !important;
+}
+
+.pgr-project-stage:not([data-mode='released']) .pgr-wedge-unreleased,
+.pgr-project-stage:not([data-mode='released']) .pgr-wedge-unreleased * {
+    pointer-events: none !important;
+}
+
+/* Mode: RELEASED (pembatas geser ke kanan -> sisi kiri luas untuk carousel miring) */
+.pgr-project-stage[data-mode='released'] .pgr-split-trigger-left,
+.pgr-project-stage[data-mode='released'] .pgr-split-trigger-right {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-split-trigger-left {
+    transform: translate3d(-28px, 0, 0);
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-split-trigger-right {
+    transform: translate3d(28px, 0, 0);
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-expanded-released {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition-delay: 140ms;
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-wedge-unreleased {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition-delay: 220ms;
+}
+
+/* Mode: UNRELEASED (pembatas geser ke kiri -> sisi kanan luas untuk carousel miring) */
+.pgr-project-stage[data-mode='unreleased'] .pgr-split-trigger-left,
+.pgr-project-stage[data-mode='unreleased'] .pgr-split-trigger-right {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pgr-project-stage[data-mode='unreleased'] .pgr-split-trigger-left {
+    transform: translate3d(-28px, 0, 0);
+}
+
+.pgr-project-stage[data-mode='unreleased'] .pgr-split-trigger-right {
+    transform: translate3d(28px, 0, 0);
+}
+
+.pgr-project-stage[data-mode='unreleased'] .pgr-expanded-unreleased {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition-delay: 140ms;
+}
+
+.pgr-project-stage[data-mode='unreleased'] .pgr-wedge-released {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+    transition-delay: 220ms;
+}
+
+/* Desktop Sliding Diagonal Curtain (>= 1024px) */
 @media (min-width: 1024px) {
-    .pgr-split-left {
-        clip-path: polygon(0 0, 62% 0, 44% 100%, 0 100%);
+    .pgr-project-stage[data-mode='split'][data-split-hover='released'] {
+        --split-tx: 38.5cqw;
     }
 
-    .pgr-split-right {
-        clip-path: polygon(62% 0, 100% 0, 100% 100%, 44% 100%);
+    .pgr-project-stage[data-mode='split'][data-split-hover='unreleased'] {
+        --split-tx: 33.5cqw;
     }
 
-    .pgr-split-slash {
-        clip-path: polygon(61.75% 0, 62.25% 0, 44.25% 100%, 43.75% 100%);
+    .pgr-project-stage[data-mode='released'] {
+        --split-tx: 73cqw;
+    }
+
+    .pgr-project-stage[data-mode='released'][data-wedge-hover='unreleased'] {
+        --split-tx: 70.8cqw;
+    }
+
+    .pgr-project-stage[data-mode='unreleased'] {
+        --split-tx: -1cqw;
+    }
+
+    .pgr-project-stage[data-mode='unreleased'][data-wedge-hover='released'] {
+        --split-tx: 1.2cqw;
+    }
+
+    .pgr-pane-unreleased {
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        z-index: 20;
+        width: 160cqw;
+        min-height: 0;
+        clip-path: polygon(28cqw 0, 100% 0, 100% 100%, 0 100%);
+        transform: translate3d(var(--split-tx), 0, 0);
+        transition: transform 660ms cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+    }
+
+    .pgr-pane-unreleased-inner {
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        width: 100cqw;
+        transform: translate3d(calc(var(--split-tx) * -1), 0, 0);
+        transition: transform 660ms cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+    }
+
+    /* Tactical Cyber-Blade Diagonal Divider: bergerak 1:1 bersama tirai tanpa terpotong clip-path */
+    .pgr-split-divider-beam {
+        width: 28cqw;
+        transform: translate3d(var(--split-tx), 0, 0);
+        transition: transform 660ms cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+    }
+
+    .pgr-divider-core-shell {
+        transition:
+            transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 360ms ease;
+    }
+
+    .pgr-divider-chevrons {
+        transition: opacity 280ms ease, transform 320ms ease;
+    }
+
+    .pgr-project-stage[data-mode='released'] .pgr-divider-core-shell {
+        transform: rotate(90deg) scale(0.82);
+    }
+
+    .pgr-project-stage[data-mode='unreleased'] .pgr-divider-core-shell {
+        transform: rotate(-90deg) scale(0.82);
+    }
+
+    .pgr-project-stage[data-mode='released'] .pgr-divider-chevrons,
+    .pgr-project-stage[data-mode='unreleased'] .pgr-divider-chevrons {
+        opacity: 0;
+    }
+
+    .pgr-project-stage[data-mode='released'] .pgr-released-emblem {
+        transform: translate3d(44cqw, -50%, 0) scale(0.92);
+    }
+
+    .pgr-project-stage[data-mode='unreleased'] .pgr-unreleased-emblem {
+        transform: translate3d(-44cqw, -50%, 0) scale(0.92);
+    }
+}
+
+@keyframes pgr-blade-pulse-flow {
+    0% {
+        stroke-dashoffset: 158;
+        opacity: 0.25;
+    }
+
+    45% {
+        opacity: 0.92;
+    }
+
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 0.25;
+    }
+}
+
+.pgr-blade-energy-pulse {
+    animation: pgr-blade-pulse-flow 3.6s linear infinite;
+}
+
+/* Mobile & Tablet Stack Switching (< 1024px) */
+@media (max-width: 1023px) {
+    .pgr-project-stage[data-mode='split'] .pgr-expanded-released,
+    .pgr-project-stage[data-mode='split'] .pgr-expanded-unreleased {
+        display: none;
+    }
+
+    .pgr-project-stage[data-mode='released'] .pgr-pane-unreleased,
+    .pgr-project-stage[data-mode='released'] .pgr-split-trigger-left {
+        display: none;
+    }
+
+    .pgr-project-stage[data-mode='unreleased'] .pgr-pane-released,
+    .pgr-project-stage[data-mode='unreleased'] .pgr-split-trigger-right {
+        display: none;
+    }
+}
+
+/* Carousel Miring (Diagonal Slanted Staircase ala PGR MEDIA -> VIDEO) */
+.pgr-diag-card {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: clamp(11.25rem, 50%, 15rem);
+    aspect-ratio: 16 / 10;
+    width: auto;
+    max-width: min(84%, 25.5rem);
+    transition:
+        transform 580ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 460ms ease,
+        filter 420ms ease;
+    will-change: transform, opacity;
+}
+
+/* Teleport instan tak terlihat di ujung luar carousel agar loop infinite 100% searah & mulus */
+.pgr-diag-card[data-diag-teleport='true'] {
+    transition: none !important;
+}
+
+.pgr-diag-card[data-diag-slot='active'] {
+    z-index: 30;
+    opacity: 1;
+    filter: brightness(1);
+    transform: translate3d(-50%, -53%, 0) scale(1);
+    pointer-events: auto;
+}
+
+.pgr-diag-card[data-diag-slot='prev'] {
+    z-index: 16;
+    opacity: 0.44;
+    filter: brightness(0.84);
+    transform: translate3d(-84%, -88%, 0) scale(0.76);
+    pointer-events: auto;
+}
+
+.pgr-diag-card[data-diag-slot='prev']:hover {
+    opacity: 0.78;
+    filter: brightness(0.95);
+    transform: translate3d(-80%, -84%, 0) scale(0.79);
+}
+
+.pgr-diag-card[data-diag-slot='next'] {
+    z-index: 20;
+    opacity: 0.62;
+    filter: brightness(0.88);
+    transform: translate3d(-11%, -10%, 0) scale(0.78);
+    pointer-events: auto;
+}
+
+.pgr-diag-card[data-diag-slot='next']:hover {
+    opacity: 0.9;
+    filter: brightness(0.98);
+    transform: translate3d(-14%, -13%, 0) scale(0.81);
+}
+
+.pgr-diag-card[data-diag-slot='far-next'] {
+    z-index: 10;
+    opacity: 0.22;
+    filter: brightness(0.75);
+    transform: translate3d(20%, 24%, 0) scale(0.62);
+    pointer-events: none;
+}
+
+.pgr-diag-card[data-diag-slot='spawn-top'] {
+    z-index: 6;
+    opacity: 0;
+    transform: translate3d(-116%, -122%, 0) scale(0.6);
+    pointer-events: none;
+}
+
+.pgr-diag-card[data-diag-slot='spawn-bottom'] {
+    z-index: 6;
+    opacity: 0;
+    transform: translate3d(46%, 50%, 0) scale(0.5);
+    pointer-events: none;
+}
+
+/* Kartu belakang carousel miring: TANPA tulisan; nama sistem & tech stack di bawah gambar swipe kiri -> kanan saat kartu maju ke depan */
+.pgr-diag-caption-shell {
+    opacity: 0;
+    transition: opacity 150ms ease 0ms;
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-diag-card[data-diag-group-item='released'][data-diag-slot='active'] .pgr-diag-caption-shell,
+.pgr-project-stage[data-mode='unreleased'] .pgr-diag-card[data-diag-group-item='unreleased'][data-diag-slot='active'] .pgr-diag-caption-shell {
+    opacity: 1;
+    transition: opacity 280ms ease 110ms;
+}
+
+.pgr-diag-text-wipe {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: translate3d(-16px, 0, 0);
+    transition:
+        clip-path 180ms cubic-bezier(0.4, 0, 1, 1) 0ms,
+        transform 180ms ease 0ms,
+        opacity 140ms ease 0ms;
+    will-change: clip-path, transform, opacity;
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-diag-card[data-diag-group-item='released'][data-diag-slot='active'] .pgr-diag-text-wipe,
+.pgr-project-stage[data-mode='unreleased'] .pgr-diag-card[data-diag-group-item='unreleased'][data-diag-slot='active'] .pgr-diag-text-wipe {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: translate3d(0, 0, 0);
+    transition:
+        clip-path 500ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 300ms ease;
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-diag-card[data-diag-group-item='released'][data-diag-slot='active'] .pgr-diag-wipe-1,
+.pgr-project-stage[data-mode='unreleased'] .pgr-diag-card[data-diag-group-item='unreleased'][data-diag-slot='active'] .pgr-diag-wipe-1 {
+    transition-delay: 140ms;
+}
+
+.pgr-project-stage[data-mode='released'] .pgr-diag-card[data-diag-group-item='released'][data-diag-slot='active'] .pgr-diag-wipe-2,
+.pgr-project-stage[data-mode='unreleased'] .pgr-diag-card[data-diag-group-item='unreleased'][data-diag-slot='active'] .pgr-diag-wipe-2 {
+    transition-delay: 220ms;
+}
+
+@media (max-width: 639px) {
+    .pgr-diag-card {
+        width: 88%;
+        height: 14.5rem;
+    }
+
+    .pgr-diag-card[data-diag-slot='prev'] {
+        opacity: 0.3;
+        transform: translate3d(-66%, -82%, 0) scale(0.78);
+    }
+
+    .pgr-diag-card[data-diag-slot='next'] {
+        opacity: 0.45;
+        transform: translate3d(-34%, -22%, 0) scale(0.78);
+    }
+
+    .pgr-diag-card[data-diag-slot='far-next'] {
+        opacity: 0;
     }
 }
 
@@ -734,7 +1130,10 @@
 /* Matikan transition CSS selama glitch berlangsung agar setiap loncatan/flicker benar-benar tajam 0ms */
 html.pgr-glitch-active *,
 html.pgr-glitch-active *::before,
-html.pgr-glitch-active *::after {
+html.pgr-glitch-active *::after,
+.pgr-glitch-scoped-active *,
+.pgr-glitch-scoped-active *::before,
+.pgr-glitch-scoped-active *::after {
     transition: none !important;
 }
 
@@ -749,6 +1148,13 @@ html.pgr-glitch-active *::after {
     z-index: 120;
     pointer-events: none;
     overflow: hidden;
+}
+
+/* Varian scoped khusus untuk area konten saja (tidak menyentuh header/sidebar/footer) */
+.pgr-glitch-hud.pgr-glitch-hud-scoped {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
 }
 
 .pgr-glitch-scanlines {
@@ -784,6 +1190,15 @@ html.pgr-glitch-active *::after {
 
     .pgr-viewport-track,
     .pgr-carousel-card,
+    .pgr-diag-card,
+    .pgr-diag-text-wipe,
+    .pgr-pane-unreleased,
+    .pgr-pane-unreleased-inner,
+    .pgr-split-divider-beam,
+    .pgr-blade-energy-pulse,
+    .pgr-divider-core-shell,
+    .pgr-expanded-released,
+    .pgr-expanded-unreleased,
     .pgr-tunnel-ring,
     .pgr-btn-corners>.pgr-chamfer-sm,
     .pgr-btn-corners>.pgr-chamfer-sm::before,

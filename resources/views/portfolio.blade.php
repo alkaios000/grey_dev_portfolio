@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Portofolio resmi Grey_dev — Software Engineer.">
+    <meta name="description" content="Portofolio resmi Grey_dev.">
     <title>Grey_dev — Portfolio</title>
 
     {{-- Sinkronisasi tema awal sebelum render agar bebas flash (FOUC) --}}
@@ -20,13 +20,16 @@
     {{-- Persistent PGR-Inspired White Tactical Navigation Rail & Mobile Header --}}
     @include('portfolio.partials.hud')
 
-    {{-- Full-Viewport Vertical Section Track (4 Halaman Utama: HOME, DOMAINS, TOOLS, OTHERS) --}}
+    {{-- Full-Viewport Vertical Section Track (4 Halaman Utama: HOME, PROJECT, TOOLS, OTHERS) --}}
     <main id="pgr-track" class="pgr-viewport-track relative w-full">
         @include('portfolio.partials.hero')
         @include('portfolio.partials.media')
         @include('portfolio.partials.projects')
         @include('portfolio.partials.connect')
     </main>
+
+    {{-- Halaman Arsip Project (Released & Unreleased — terpisah dari TOOLS) --}}
+    @include('portfolio.partials.project_archive')
 
     {{-- Halaman Detail Tool (Layout PGR DATA: dibuka saat kartu/tombol di TOOLS diklik) --}}
     @include('portfolio.partials.data')

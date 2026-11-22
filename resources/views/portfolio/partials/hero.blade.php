@@ -240,26 +240,21 @@
         </h1>
 
         {{-- Subtle Modern Divider --}}
-        <div aria-hidden="true" class="mb-3 mt-1.5 flex items-center gap-2.5">
+        <div aria-hidden="true" class="mt-2 flex items-center gap-2.5">
             <span class="h-px w-8 bg-gradient-to-r from-transparent to-blue-300/80 dark:to-zinc-500/80 sm:w-12"></span>
             <span class="h-1.5 w-1.5 rotate-45 bg-blue-500 dark:bg-zinc-300"></span>
             <span class="h-px w-8 bg-gradient-to-l from-transparent to-blue-300/80 dark:to-zinc-500/80 sm:w-12"></span>
         </div>
 
-        {{-- Clean Single-Line Role Subtitle (Philosopher — flared RPG humanist mirip Genshin Impact) --}}
-        <p class="font-rpg text-sm font-bold tracking-[0.16em] text-slate-600 dark:text-zinc-300 sm:text-base sm:tracking-[0.2em]">
-            Software Engineer
-        </p>
-
         {{-- Refined Compact Action Duo --}}
-        <div class="mt-6 flex w-full flex-col items-center justify-center gap-2.5 sm:w-auto sm:flex-row sm:gap-3.5">
+        <div class="mt-5 flex w-full flex-col items-center justify-center gap-2.5 sm:w-auto sm:flex-row sm:gap-3.5">
             <button
                 type="button"
                 data-pgr-goto="projects"
                 class="pgr-btn-corners group inline-flex w-full max-w-[13.5rem] focus:outline-none sm:w-auto sm:max-w-none"
             >
-                <span class="pgr-chamfer-sm relative z-10 inline-flex w-full items-center justify-center gap-2 bg-blue-500 px-5 py-2 font-tech text-[11px] font-semibold tracking-[0.22em] text-white transition-colors duration-250 group-hover:bg-blue-600 dark:bg-zinc-600 dark:text-zinc-100 dark:group-hover:bg-zinc-500">
-                    <span>EXPLORE PROJECTS</span>
+                <span class="pgr-chamfer-sm relative z-10 inline-flex w-full items-center justify-center gap-2 bg-blue-500 px-6 py-2 font-tech text-[11px] font-semibold tracking-[0.24em] text-white transition-colors duration-250 group-hover:bg-blue-600 dark:bg-zinc-600 dark:text-zinc-100 dark:group-hover:bg-zinc-500">
+                    <span>TOOLS</span>
                     <svg
                         class="h-3 w-3 transition-transform duration-250 group-hover:translate-x-0.5"
                         viewBox="0 0 16 16"
@@ -277,8 +272,8 @@
                 class="pgr-btn-corners group inline-flex w-full max-w-[13.5rem] focus:outline-none sm:w-auto sm:max-w-none"
             >
                 <span class="pgr-chamfer-sm relative z-10 flex w-full bg-slate-200/95 p-[1px] transition-colors duration-250 group-hover:bg-blue-400 dark:bg-zinc-600 dark:group-hover:bg-zinc-400">
-                    <span class="pgr-chamfer-sm flex w-full items-center justify-center bg-white/95 px-5 py-2 font-tech text-[11px] font-semibold tracking-[0.22em] text-slate-700 transition-colors duration-250 group-hover:text-blue-600 dark:bg-[#22252b] dark:text-zinc-200 dark:group-hover:text-white">
-                        DOMAINS
+                    <span class="pgr-chamfer-sm flex w-full items-center justify-center bg-white/95 px-6 py-2 font-tech text-[11px] font-semibold tracking-[0.24em] text-slate-700 transition-colors duration-250 group-hover:text-blue-600 dark:bg-[#22252b] dark:text-zinc-200 dark:group-hover:text-white">
+                        PROJECT
                     </span>
                 </span>
             </button>

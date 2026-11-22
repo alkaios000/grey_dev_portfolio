@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileMenuClose = document.getElementById('pgr-mobile-menu-close');
     const toolDetailView = document.getElementById('pgr-tool-detail-view');
     const isToolDetailOpen = () => Boolean(toolDetailView && !toolDetailView.classList.contains('hidden'));
+    const projectArchiveView = document.getElementById('pgr-project-archive-view');
+    const isProjectArchiveOpen = () => Boolean(projectArchiveView && !projectArchiveView.classList.contains('hidden'));
 
     const totalSections = sections.length;
     let activeIndex = 0;
@@ -164,6 +166,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (foundIndex === -1) {
             return;
         }
+        if (isProjectArchiveOpen()) {
+            if (id === 'media') {
+                closeProjectArchive(useGlitch);
+            } else {
+                closeProjectArchiveAndGoTo(foundIndex, useGlitch);
+            }
+            return;
+        }
         if (isToolDetailOpen()) {
             if (id === 'projects') {
                 closeToolDetail(useGlitch);
@@ -213,6 +223,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Saat kursor di dalam carousel miring PROJECT, scroll mouse menggeser kartu diagonal (bukan pindah halaman)
+            if (isProjectCarouselOpen() && event.target.closest('[data-diag-track]')) {
+                if (Math.abs(event.deltaY) < 12) {
+                    return;
+                }
+                event.preventDefault();
+                stepDiagCarouselWheel(event.deltaY > 0 ? 1 : -1);
+                return;
+            }
+
             const scrollableParent = event.target.closest('[data-pgr-scrollable]');
             if (scrollableParent) {
                 const canScrollDown =
@@ -252,8 +272,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keyboard navigation (atas/bawah untuk section, kiri/kanan untuk TOOLS & Detail Tool, ESC untuk tutup)
     window.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
+            if (isProjectArchiveOpen()) {
+                closeProjectArchive(true);
+                return;
+            }
             if (isToolDetailOpen()) {
                 closeToolDetail(true);
+                return;
+            }
+            if (isProjectCarouselOpen() && sections[activeIndex]?.dataset.pgrSection === 'media') {
+                exitProjectCarousel();
                 return;
             }
             closeAllModals();
@@ -278,6 +306,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const activeId = sections[activeIndex]?.dataset.pgrSection;
+        if (activeId === 'media' && isProjectCarouselOpen()) {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                setDiagIndex(diagIndices[diagStatus] + 1);
+                return;
+            }
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                setDiagIndex(diagIndices[diagStatus] - 1);
+                return;
+            }
+        }
+
         if (isDesktop()) {
             if (event.key === 'ArrowDown' || event.key === 'PageDown') {
                 event.preventDefault();
@@ -290,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const activeId = sections[activeIndex]?.dataset.pgrSection;
         if (activeId === 'projects') {
             if (event.key === 'ArrowRight') {
                 setProjectIndex(projectIndex + 1);
@@ -408,6 +449,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (includeHud && hudChrome) roots.push(hudChrome);
         if (rootOverride) {
             roots.push(rootOverride);
+        } else if (includeHud && isProjectArchiveOpen() && projectArchiveView) {
+            roots.push(projectArchiveView);
         } else if (includeHud && isToolDetailOpen() && toolDetailView) {
             roots.push(toolDetailView);
         } else {
@@ -525,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Mesin transisi glitch digital reusable (hard-cut 120ms, total 340ms) untuk
      * pindah halaman via sidebar/tombol maupun buka/tutup halaman detail Tool (layout DATA).
      */
-    const runGlitchViewSwap = ({ outgoingOpts, onSwap, incomingOpts }) => {
+    const runGlitchViewSwap = ({ outgoingOpts, onSwap, incomingOpts, overlayRoot = null }) => {
         if (prefersReducedMotion || isThemeTransitioning) {
             onSwap();
             return;
@@ -537,6 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const SWAP_MS = 120;
         const TOTAL_MS = 340;
         const isDark = document.documentElement.classList.contains('dark');
+        const isScoped = Boolean(overlayRoot);
 
         const createPhaseStates = (opts, phaseStartMs, phaseEndMinMs, phaseEndMaxMs) => {
             const { elements, textEntries } = collectGlitchTargets({ ...opts, includeHud: false });
@@ -648,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hudLayer = document.createElement('div');
         hudLayer.id = 'pgr-page-glitch-hud';
-        hudLayer.className = 'pgr-glitch-hud';
+        hudLayer.className = isScoped ? 'pgr-glitch-hud pgr-glitch-hud-scoped' : 'pgr-glitch-hud';
         hudLayer.setAttribute('aria-hidden', 'true');
 
         const scanlines = document.createElement('div');
@@ -667,8 +711,13 @@ document.addEventListener('DOMContentLoaded', () => {
             bars.push(bar);
         }
 
-        document.documentElement.classList.add('pgr-glitch-active');
-        document.body.appendChild(hudLayer);
+        if (isScoped) {
+            overlayRoot.classList.add('pgr-glitch-scoped-active');
+            overlayRoot.appendChild(hudLayer);
+        } else {
+            document.documentElement.classList.add('pgr-glitch-active');
+            document.body.appendChild(hudLayer);
+        }
 
         let outgoingPhase = createPhaseStates(outgoingOpts, 0, SWAP_MS + 40, SWAP_MS + 80);
         let incomingPhase = null;
@@ -692,7 +741,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasSwapped = true;
             }
 
-            document.documentElement.classList.remove('pgr-glitch-active');
+            if (isScoped) {
+                overlayRoot.classList.remove('pgr-glitch-scoped-active');
+            } else {
+                document.documentElement.classList.remove('pgr-glitch-active');
+            }
             hudLayer.remove();
             if (cancelActivePageGlitch === abortHandler) {
                 cancelActivePageGlitch = null;
@@ -744,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         bar.style.top = `${y}%`;
                         bar.style.height = `${h}px`;
                         bar.style.width = `${w}%`;
-                        bar.style.transform = `translate3d(${x}vw, 0, 0)`;
+                        bar.style.transform = `translate3d(${x}${isScoped ? '%' : 'vw'}, 0, 0)`;
                         bar.style.background = pickRandom(barColors);
                         bar.style.opacity = randRange(0.24, nearSwap ? 0.86 : 0.62).toFixed(2);
                     } else {
@@ -1704,6 +1757,383 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =========================================================================
+    // PROJECT ARCHIVE VIEW (RELEASED & UNRELEASED — terpisah penuh dari TOOLS)
+    // =========================================================================
+    const projectArchiveTabs = Array.from(document.querySelectorAll('[data-project-archive-tab]'));
+    const projectArchivePanels = Array.from(document.querySelectorAll('[data-project-archive-panel]'));
+    const projectArchiveContent = document.getElementById('pgr-project-archive-content');
+    const projectArchiveTitle = document.getElementById('pgr-project-archive-title');
+    const projectArchiveBackBtn = document.getElementById('pgr-project-archive-back');
+    let activeProjectArchiveTab = 'released';
+
+    const setProjectArchiveTab = (tabName, useGlitch = false) => {
+        const nextTab = tabName === 'unreleased' ? 'unreleased' : 'released';
+        const isSwitching = nextTab !== activeProjectArchiveTab;
+
+        const applyTabState = () => {
+            activeProjectArchiveTab = nextTab;
+            projectArchiveTabs.forEach((tab) => {
+                tab.dataset.active = tab.dataset.projectArchiveTab === activeProjectArchiveTab ? 'true' : 'false';
+            });
+            projectArchivePanels.forEach((panel) => {
+                const isMatch = panel.dataset.projectArchivePanel === activeProjectArchiveTab;
+                panel.classList.toggle('hidden', !isMatch);
+                panel.classList.toggle('grid', isMatch);
+            });
+            if (projectArchiveTitle) {
+                projectArchiveTitle.textContent = activeProjectArchiveTab.toUpperCase();
+            }
+            if (isProjectArchiveOpen()) {
+                const hash = `#project-${activeProjectArchiveTab}`;
+                if (window.location.hash !== hash) {
+                    window.history.replaceState(null, '', hash);
+                }
+            }
+        };
+
+        if (!useGlitch || !isSwitching || !projectArchiveContent || !isProjectArchiveOpen()) {
+            applyTabState();
+            return;
+        }
+
+        // Aktifkan status tombol tab segera, lalu glitch hanya pada area konten kartu saja
+        projectArchiveTabs.forEach((tab) => {
+            tab.dataset.active = tab.dataset.projectArchiveTab === nextTab ? 'true' : 'false';
+        });
+
+        runGlitchViewSwap({
+            outgoingOpts: { rootOverride: projectArchiveContent },
+            onSwap: applyTabState,
+            incomingOpts: { rootOverride: projectArchiveContent },
+            overlayRoot: projectArchiveContent,
+        });
+    };
+
+    const showProjectArchiveImmediate = (tabName) => {
+        if (!projectArchiveView) {
+            return;
+        }
+        const mediaIdx = sections.findIndex((s) => s.dataset.pgrSection === 'media');
+        if (mediaIdx !== -1 && activeIndex !== mediaIdx) {
+            goToSection(mediaIdx, false, true);
+        }
+        setProjectArchiveTab(tabName);
+        projectArchiveView.classList.remove('hidden', 'pointer-events-none', 'opacity-0');
+        projectArchiveView.classList.add('flex', 'pointer-events-auto', 'opacity-100');
+        projectArchiveView.setAttribute('aria-hidden', 'false');
+        projectArchiveView.scrollTop = 0;
+        pinnedHeader?.classList.add('opacity-0');
+        pinnedHeader?.classList.remove('opacity-100');
+        window.history.replaceState(null, '', `#project-${activeProjectArchiveTab}`);
+    };
+
+    const hideProjectArchiveImmediate = (restoreHash = true) => {
+        if (!projectArchiveView) {
+            return;
+        }
+        projectArchiveView.classList.add('hidden', 'pointer-events-none', 'opacity-0');
+        projectArchiveView.classList.remove('flex', 'pointer-events-auto', 'opacity-100');
+        projectArchiveView.setAttribute('aria-hidden', 'true');
+        if (activeIndex > 0) {
+            pinnedHeader?.classList.remove('opacity-0');
+            pinnedHeader?.classList.add('opacity-100');
+        }
+        if (restoreHash) {
+            const activeId = sections[activeIndex]?.dataset.pgrSection ?? 'media';
+            window.history.replaceState(null, '', `#${activeId}`);
+        }
+    };
+
+    const openProjectArchive = (tabName, useGlitch = true) => {
+        if (!projectArchiveView) {
+            return;
+        }
+        if (!useGlitch) {
+            showProjectArchiveImmediate(tabName);
+            return;
+        }
+        runGlitchViewSwap({
+            outgoingOpts: { sectionIndex: activeIndex },
+            onSwap: () => showProjectArchiveImmediate(tabName),
+            incomingOpts: { rootOverride: projectArchiveView },
+        });
+    };
+
+    const closeProjectArchive = (useGlitch = true) => {
+        if (!isProjectArchiveOpen()) {
+            return;
+        }
+        if (!useGlitch) {
+            hideProjectArchiveImmediate(true);
+            return;
+        }
+        runGlitchViewSwap({
+            outgoingOpts: { rootOverride: projectArchiveView },
+            onSwap: () => hideProjectArchiveImmediate(true),
+            incomingOpts: { sectionIndex: activeIndex },
+        });
+    };
+
+    const closeProjectArchiveAndGoTo = (targetIndex, useGlitch = true) => {
+        const clamped = Math.max(0, Math.min(totalSections - 1, targetIndex));
+        if (!useGlitch) {
+            hideProjectArchiveImmediate(false);
+            goToSection(clamped, true, true);
+            return;
+        }
+        runGlitchViewSwap({
+            outgoingOpts: { rootOverride: projectArchiveView },
+            onSwap: () => {
+                hideProjectArchiveImmediate(false);
+                goToSection(clamped, true, true);
+            },
+            incomingOpts: { sectionIndex: clamped },
+        });
+    };
+
+    projectArchiveBackBtn?.addEventListener('click', () => closeProjectArchive(true));
+    projectArchiveTabs.forEach((tab) => {
+        tab.addEventListener('click', () => setProjectArchiveTab(tab.dataset.projectArchiveTab || 'released', true));
+    });
+    document.querySelectorAll('[data-open-project-archive]').forEach((btn) => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            openProjectArchive(btn.dataset.openProjectArchive || 'released', true);
+        });
+    });
+
+    // =========================================================================
+    // SECTION 02: PROJECT SLIDING DIAGONAL DIVIDER + CAROUSEL MIRING (PGR UX)
+    // Klik RELEASED -> batas miring geser kanan (kiri luas untuk carousel miring)
+    // Klik UNRELEASED -> batas miring geser kiri (kanan luas untuk carousel miring)
+    // =========================================================================
+    const projectStage = document.getElementById('pgr-project-stage');
+    const expandedPanels = {
+        released: projectStage?.querySelector('[data-expanded-panel="released"]'),
+        unreleased: projectStage?.querySelector('[data-expanded-panel="unreleased"]'),
+    };
+    const diagCardsByStatus = {
+        released: Array.from(document.querySelectorAll('[data-diag-card][data-diag-group-item="released"]')),
+        unreleased: Array.from(document.querySelectorAll('[data-diag-card][data-diag-group-item="unreleased"]')),
+    };
+    const diagMobileTabs = Array.from(document.querySelectorAll('[data-mobile-diag-status]'));
+
+    let diagStatus = 'released';
+    const diagIndices = { released: 0, unreleased: 0 };
+    let diagWheelLocked = false;
+    let diagWheelTimer = null;
+
+    const isProjectCarouselOpen = () =>
+        projectStage?.dataset.mode === 'released' || projectStage?.dataset.mode === 'unreleased';
+
+    const syncDiagSlots = (targetStatus = diagStatus, direction = 0) => {
+        const statusKey = targetStatus === 'unreleased' ? 'unreleased' : 'released';
+        const cards = diagCardsByStatus[statusKey] || [];
+        const total = cards.length;
+        if (!total) {
+            return;
+        }
+        const cur = ((diagIndices[statusKey] % total) + total) % total;
+        diagIndices[statusKey] = cur;
+
+        // Hitung target slot setiap kartu + deteksi wrap-around agar kartu ujung teleport diam-diam saat tak terlihat
+        const plan = cards.map((card, i) => {
+            const oldSlot = card.dataset.diagSlot || 'spawn-bottom';
+            const diff = (i - cur + total) % total;
+            let nextSlot = 'spawn-bottom';
+
+            if (diff === 0) {
+                nextSlot = 'active';
+            } else if (diff === 1) {
+                nextSlot = 'next';
+            } else if (diff === 2 && total >= 5) {
+                nextSlot = 'far-next';
+            } else if (diff === total - 1) {
+                nextSlot = 'prev';
+            } else if (direction > 0) {
+                // Maju (bawah -> atas): kartu yang keluar dari prev meluncur halus ke spawn-top lalu pudar
+                nextSlot = oldSlot === 'prev' ? 'spawn-top' : 'spawn-bottom';
+            } else if (direction < 0) {
+                // Mundur (atas -> bawah): kartu yang keluar dari next/far-next meluncur halus ke spawn-bottom lalu pudar
+                nextSlot = oldSlot === 'next' || oldSlot === 'far-next' ? 'spawn-bottom' : 'spawn-top';
+            } else {
+                nextSlot = 'spawn-bottom';
+            }
+
+            let teleportTo = null;
+            if (direction > 0) {
+                const enteringFromBottom = nextSlot === 'far-next' || (total <= 4 && nextSlot === 'next');
+                if (enteringFromBottom && (oldSlot === 'spawn-top' || oldSlot === 'prev')) {
+                    teleportTo = 'spawn-bottom';
+                } else if (nextSlot === 'spawn-bottom' && oldSlot === 'spawn-top') {
+                    teleportTo = 'spawn-bottom';
+                }
+            } else if (direction < 0) {
+                if (nextSlot === 'prev' && (oldSlot === 'spawn-bottom' || oldSlot === 'next' || oldSlot === 'far-next')) {
+                    teleportTo = 'spawn-top';
+                } else if (nextSlot === 'spawn-top' && oldSlot === 'spawn-bottom') {
+                    teleportTo = 'spawn-top';
+                }
+            }
+
+            return { card, nextSlot, teleportTo };
+        });
+
+        // Fase 1: Teleport 0ms tak terlihat pada kartu yang memutar dari ujung akhir <-> awal
+        const teleported = [];
+        plan.forEach(({ card, teleportTo }) => {
+            if (teleportTo) {
+                card.dataset.diagTeleport = 'true';
+                card.dataset.diagSlot = teleportTo;
+                teleported.push(card);
+            }
+        });
+
+        if (teleported.length > 0 && projectStage) {
+            void projectStage.offsetWidth;
+            teleported.forEach((card) => {
+                delete card.dataset.diagTeleport;
+            });
+        }
+
+        // Fase 2: Terapkan slot tujuan sehingga seluruh kartu meluncur 100% searah tanpa ada yang melintas balik
+        plan.forEach(({ card, nextSlot }) => {
+            card.dataset.diagSlot = nextSlot;
+            card.setAttribute('aria-hidden', nextSlot === 'active' ? 'false' : 'true');
+        });
+
+        const curEl = projectStage?.querySelector(`[data-diag-counter-cur="${statusKey}"]`);
+        const totalEl = projectStage?.querySelector(`[data-diag-counter-total="${statusKey}"]`);
+
+        if (curEl) curEl.textContent = formatTwoDigits(cur + 1);
+        if (totalEl) totalEl.textContent = formatTwoDigits(total);
+    };
+
+    const setDiagIndex = (nextIdx, targetStatus = diagStatus, explicitDir = 0) => {
+        const statusKey = targetStatus === 'unreleased' ? 'unreleased' : 'released';
+        const cards = diagCardsByStatus[statusKey] || [];
+        if (!cards.length) {
+            return;
+        }
+        const prevIdx = diagIndices[statusKey];
+        const dir = explicitDir !== 0 ? explicitDir : nextIdx > prevIdx ? 1 : nextIdx < prevIdx ? -1 : 0;
+        diagIndices[statusKey] = (nextIdx + cards.length) % cards.length;
+        syncDiagSlots(statusKey, dir);
+    };
+
+    const stepDiagCarouselWheel = (deltaDir) => {
+        if (diagWheelLocked) {
+            return;
+        }
+        diagWheelLocked = true;
+        setDiagIndex(diagIndices[diagStatus] + deltaDir, diagStatus, deltaDir);
+        clearTimeout(diagWheelTimer);
+        diagWheelTimer = setTimeout(() => {
+            diagWheelLocked = false;
+        }, 280);
+    };
+
+    const enterProjectCarousel = (statusName) => {
+        if (!projectStage) {
+            return;
+        }
+        diagStatus = statusName === 'unreleased' ? 'unreleased' : 'released';
+        delete projectStage.dataset.splitHover;
+        delete projectStage.dataset.wedgeHover;
+        projectStage.dataset.status = diagStatus;
+        projectStage.dataset.mode = diagStatus;
+
+        Object.entries(expandedPanels).forEach(([key, panelEl]) => {
+            panelEl?.setAttribute('aria-hidden', key === diagStatus ? 'false' : 'true');
+        });
+        diagMobileTabs.forEach((tab) => {
+            tab.dataset.active = tab.dataset.mobileDiagStatus === diagStatus ? 'true' : 'false';
+        });
+
+        syncDiagSlots(diagStatus);
+    };
+
+    const exitProjectCarousel = () => {
+        if (!projectStage) {
+            return;
+        }
+        delete projectStage.dataset.splitHover;
+        delete projectStage.dataset.wedgeHover;
+        projectStage.dataset.mode = 'split';
+        Object.values(expandedPanels).forEach((panelEl) => {
+            panelEl?.setAttribute('aria-hidden', 'true');
+        });
+    };
+
+    // Efek magnetik tipis pada garis diagonal saat hover split 50/50
+    document.querySelectorAll('[data-split-hover-trigger]').forEach((btn) => {
+        const side = btn.dataset.splitHoverTrigger;
+        btn.addEventListener('pointerenter', () => {
+            if (projectStage?.dataset.mode === 'split' && side) {
+                projectStage.dataset.splitHover = side;
+            }
+        });
+        btn.addEventListener('pointerleave', () => {
+            if (projectStage?.dataset.splitHover === side) {
+                delete projectStage.dataset.splitHover;
+            }
+        });
+    });
+
+    // Efek magnetik tipis saat hover area wedge sisi lawan (seluruh area kiri/kanan bisa diklik)
+    document.querySelectorAll('[data-wedge-hover-trigger]').forEach((btn) => {
+        const side = btn.dataset.wedgeHoverTrigger;
+        btn.addEventListener('pointerenter', () => {
+            if (projectStage && projectStage.dataset.mode !== 'split' && side) {
+                projectStage.dataset.wedgeHover = side;
+            }
+        });
+        btn.addEventListener('pointerleave', () => {
+            if (projectStage?.dataset.wedgeHover === side) {
+                delete projectStage.dataset.wedgeHover;
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-enter-project-carousel]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            enterProjectCarousel(btn.dataset.enterProjectCarousel || 'released');
+        });
+    });
+
+    document.querySelectorAll('[data-diag-back]').forEach((btn) => {
+        btn.addEventListener('click', exitProjectCarousel);
+    });
+    document.querySelectorAll('[data-diag-view-more]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            openProjectArchive(btn.dataset.diagViewMore || diagStatus, true);
+        });
+    });
+    diagMobileTabs.forEach((tab) => {
+        tab.addEventListener('click', () => enterProjectCarousel(tab.dataset.mobileDiagStatus || 'released'));
+    });
+
+    // Klik kartu miring prev / next langsung meluncur diagonal ke tengah fokus searah loop infinite
+    Object.entries(diagCardsByStatus).forEach(([statusKey, cards]) => {
+        cards.forEach((card, idx) => {
+            card.addEventListener('click', () => {
+                if (projectStage?.dataset.mode !== statusKey) {
+                    return;
+                }
+                const slot = card.dataset.diagSlot;
+                if (slot === 'next') {
+                    setDiagIndex(idx, statusKey, 1);
+                } else if (slot === 'prev') {
+                    setDiagIndex(idx, statusKey, -1);
+                }
+            });
+        });
+    });
+
+    syncDiagSlots('released');
+    syncDiagSlots('unreleased');
+
+    // =========================================================================
     // SECTION 03: TOOLS 3D COVERFLOW CAROUSEL + MULTI-LAYER CURSOR PARALLAX
     // =========================================================================
     const carouselStage = document.getElementById('pgr-carousel-stage');
@@ -2013,7 +2443,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const contactModal = document.getElementById('pgr-contact-modal');
 
     const isAnyModalOpen = () => {
-        return isToolDetailOpen() || Boolean(contactModal && !contactModal.classList.contains('hidden'));
+        return (
+            isProjectArchiveOpen() ||
+            isToolDetailOpen() ||
+            Boolean(contactModal && !contactModal.classList.contains('hidden'))
+        );
     };
 
     const closeAllModals = () => {
@@ -2086,9 +2520,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const initialHash = window.location.hash.replace('#', '').toLowerCase();
     const initialToolMatch = initialHash.match(/^tool-(\d+)$/);
+    const initialProjectArchiveMatch = initialHash.match(/^project-(released|unreleased)$/);
     const initialIdx = sections.findIndex((s) => s.dataset.pgrSection === initialHash);
     handleViewportMode();
-    if (initialToolMatch) {
+    if (initialProjectArchiveMatch) {
+        showProjectArchiveImmediate(initialProjectArchiveMatch[1]);
+        setProjectIndex(0);
+    } else if (initialToolMatch) {
         const toolNum = Math.max(0, Math.min(toolDetailSlides.length - 1, parseInt(initialToolMatch[1], 10) - 1));
         showToolDetailImmediate(toolNum);
     } else {
@@ -2110,11 +2548,21 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('scroll', enforceDesktopTopScroll, { passive: true });
     window.addEventListener('hashchange', () => {
         const nextHash = window.location.hash.replace('#', '').toLowerCase();
+        const archiveMatch = nextHash.match(/^project-(released|unreleased)$/);
+        if (archiveMatch) {
+            if (isToolDetailOpen()) hideToolDetailImmediate(false);
+            showProjectArchiveImmediate(archiveMatch[1]);
+            return;
+        }
         const toolMatch = nextHash.match(/^tool-(\d+)$/);
         if (toolMatch) {
+            if (isProjectArchiveOpen()) hideProjectArchiveImmediate(false);
             const toolNum = Math.max(0, Math.min(toolDetailSlides.length - 1, parseInt(toolMatch[1], 10) - 1));
             showToolDetailImmediate(toolNum);
             return;
+        }
+        if (isProjectArchiveOpen()) {
+            hideProjectArchiveImmediate(false);
         }
         if (isToolDetailOpen()) {
             hideToolDetailImmediate(false);
