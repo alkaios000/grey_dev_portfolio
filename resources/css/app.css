@@ -1,0 +1,804 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *, .pgr-skin-dark, .pgr-skin-dark *):where(:not(.pgr-skin-light, .pgr-skin-light *)));
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
+    --font-brand: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+    --font-rpg: 'Philosopher', 'Instrument Sans', ui-sans-serif, sans-serif;
+    --font-tech: 'Rajdhani', 'Instrument Sans', ui-sans-serif, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+    --color-pgr-bg: #ffffff;
+    --color-pgr-surface: #f8fafc;
+    --color-pgr-accent: #3b82f6;
+    --color-pgr-accent-soft: #60a5fa;
+    --color-pgr-accent-deep: #2563eb;
+    --color-pgr-cyan: #0ea5e9;
+    --color-pgr-steel: #64748b;
+}
+
+@layer base {
+
+    /* Kursor custom global dari resources/svg/cursor/cursor.svg (hotspot ujung panah 0, 0) */
+    html,
+    body,
+    .pgr-skin-light {
+        --pgr-trail-a: #3b82f6;
+        --pgr-trail-b: #0ea5e9;
+        --pgr-trail-c: #6366f1;
+        --pgr-ring-stroke: rgba(147, 197, 253, 0.22);
+        --pgr-ring-accent: rgba(59, 130, 246, 0.24);
+        --pgr-ring-tick: rgba(59, 130, 246, 0.45);
+        --pgr-star-fill: #60a5fa;
+    }
+
+    html,
+    body {
+        background-color: var(--color-pgr-bg);
+        color: #0f172a;
+        cursor: url('../svg/cursor/cursor.svg') 0 0, auto;
+        overflow-x: clip;
+        scroll-behavior: smooth;
+    }
+
+    html.dark,
+    html.dark body,
+    .pgr-skin-dark {
+        --pgr-trail-a: #a1a1aa;
+        --pgr-trail-b: #d4d4d8;
+        --pgr-trail-c: #71717a;
+        --pgr-ring-stroke: rgba(161, 161, 170, 0.2);
+        --pgr-ring-accent: rgba(161, 161, 170, 0.28);
+        --pgr-ring-tick: rgba(212, 212, 216, 0.48);
+        --pgr-star-fill: #a1a1aa;
+    }
+
+    html.dark,
+    html.dark body {
+        background-color: #141518;
+        color: #f4f4f5;
+        color-scheme: dark;
+        cursor: url('../svg/cursor/cursor-dark.svg') 0 0, auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        cursor: inherit;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    img,
+    svg,
+    a {
+        -webkit-user-drag: none;
+    }
+
+    input,
+    textarea {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+
+    ::selection {
+        background-color: rgb(59 130 246 / 0.18);
+        color: #0f172a;
+    }
+
+    .dark ::selection {
+        background-color: rgb(161 161 170 / 0.35);
+        color: #fafafa;
+    }
+
+    /* Scrollbar custom tipis tanpa mengubah dimensi layout */
+    ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f8fafc;
+    }
+
+    .dark ::-webkit-scrollbar-track {
+        background: #1b1d22;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: rgb(96 165 250 / 0.55);
+        border-radius: 9999px;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+        background-color: rgb(113 113 122 / 0.75);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background-color: #3b82f6;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+        background-color: #a1a1aa;
+    }
+}
+
+/* ==========================================================================
+   PGR Tactical HUD Primitives & Background Patterns (Light + Dark Gray Mode)
+   ========================================================================== */
+
+.pgr-dot-grid,
+.pgr-skin-light .pgr-dot-grid {
+    background-image: radial-gradient(rgb(15 23 42 / 0.1) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+.dark .pgr-dot-grid,
+.pgr-skin-dark .pgr-dot-grid {
+    background-image: radial-gradient(rgb(212 212 216 / 0.14) 1px, transparent 1px);
+}
+
+.pgr-skin-light .pgr-dot-grid {
+    background-image: radial-gradient(rgb(15 23 42 / 0.1) 1px, transparent 1px);
+}
+
+.pgr-fine-grid {
+    background-image:
+        linear-gradient(to right, rgb(15 23 42 / 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(15 23 42 / 0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+}
+
+.dark .pgr-fine-grid,
+.pgr-skin-dark .pgr-fine-grid {
+    background-image:
+        linear-gradient(to right, rgb(212 212 216 / 0.075) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(212 212 216 / 0.075) 1px, transparent 1px);
+}
+
+.pgr-skin-light .pgr-fine-grid {
+    background-image:
+        linear-gradient(to right, rgb(15 23 42 / 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(15 23 42 / 0.045) 1px, transparent 1px);
+}
+
+.pgr-scanlines {
+    background-image: repeating-linear-gradient(to bottom,
+            transparent 0px,
+            transparent 3px,
+            rgb(15 23 42 / 0.015) 3px,
+            rgb(15 23 42 / 0.015) 4px);
+}
+
+.pgr-chamfer {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+
+.pgr-chamfer-sm {
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+/* Garis siku taktis (L-bracket ┌ & ┘) di kiri atas & kanan bawah saat hover (muncul dari dalam ke luar dengan pad) */
+.pgr-btn-corners {
+    position: relative;
+    isolation: isolate;
+}
+
+.pgr-btn-corners::before,
+.pgr-btn-corners::after {
+    content: '';
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    border-style: solid;
+    border-color: #2563eb;
+    border-width: 0;
+    transition:
+        transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 180ms ease-out,
+        border-color 200ms ease;
+}
+
+/* Garis siku kiri atas (┌) — mulai di dalam sudut tombol lalu keluar dengan pad 5px */
+.pgr-btn-corners::before {
+    top: -5px;
+    left: -5px;
+    border-top-width: 2px;
+    border-left-width: 2px;
+    transform: translate3d(6px, 6px, 0) scale(0.55);
+}
+
+/* Garis siku kanan bawah (┘) — mulai di dalam sudut tombol lalu keluar dengan pad 5px */
+.pgr-btn-corners::after {
+    bottom: -5px;
+    right: -5px;
+    border-bottom-width: 2px;
+    border-right-width: 2px;
+    transform: translate3d(-6px, -6px, 0) scale(0.55);
+}
+
+.pgr-btn-corners:hover::before,
+.pgr-btn-corners:hover::after,
+.pgr-btn-corners:focus-visible::before,
+.pgr-btn-corners:focus-visible::after {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+}
+
+.dark .pgr-btn-corners::before,
+.dark .pgr-btn-corners::after,
+.pgr-skin-dark .pgr-btn-corners::before,
+.pgr-skin-dark .pgr-btn-corners::after {
+    border-color: #d4d4d8;
+}
+
+.pgr-skin-light .pgr-btn-corners::before,
+.pgr-skin-light .pgr-btn-corners::after {
+    border-color: #2563eb;
+}
+
+/* Efek real micro-glitch pada tombol saat hover (slice tear cyan/magenta + RGB chromatic split + skew, bukan sekedar getar) */
+.pgr-btn-corners>.pgr-chamfer-sm {
+    overflow: hidden;
+}
+
+.pgr-btn-corners>.pgr-chamfer-sm::before,
+.pgr-btn-corners>.pgr-chamfer-sm::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+}
+
+@keyframes pgr-btn-glitch-face {
+    0% {
+        transform: skewX(-10deg) translate3d(-1px, 0, 0);
+        text-shadow: -3px 0 rgba(255, 42, 109, 0.95), 3px 0 rgba(5, 217, 232, 0.95);
+        filter: contrast(1.25);
+    }
+
+    22% {
+        transform: skewX(8deg) translate3d(1px, 0, 0);
+        text-shadow: 3px 0 rgba(255, 42, 109, 0.9), -3px 0 rgba(5, 217, 232, 0.95);
+        filter: invert(0.18) contrast(1.3);
+    }
+
+    46% {
+        transform: skewX(-5deg);
+        text-shadow: -2.5px 0 rgba(5, 217, 232, 0.95), 2.5px 0 rgba(255, 42, 109, 0.85);
+        filter: brightness(1.12);
+    }
+
+    72% {
+        transform: skewX(3deg);
+        text-shadow: 2px 0 rgba(5, 217, 232, 0.8), -2px 0 rgba(255, 42, 109, 0.75);
+        filter: none;
+    }
+
+    100% {
+        transform: none;
+        text-shadow: none;
+        filter: none;
+    }
+}
+
+/* Lapisan sayatan horizontal Cyan (VRAM slice 1) melintasi badan tombol */
+@keyframes pgr-btn-glitch-slice-a {
+    0% {
+        opacity: 0.72;
+        background: linear-gradient(90deg, transparent 5%, rgba(5, 217, 232, 0.82) 35%, rgba(255, 255, 255, 0.9) 65%, transparent 95%);
+        clip-path: inset(14% 0 64% 0);
+        transform: translate3d(7px, 0, 0);
+    }
+
+    30% {
+        opacity: 0.65;
+        background: linear-gradient(90deg, rgba(5, 217, 232, 0.75), rgba(255, 255, 255, 0.85) 55%, transparent);
+        clip-path: inset(62% 0 18% 0);
+        transform: translate3d(-6px, 0, 0);
+    }
+
+    60% {
+        opacity: 0.55;
+        background: rgba(5, 217, 232, 0.7);
+        clip-path: inset(38% 0 46% 0);
+        transform: translate3d(5px, 0, 0);
+    }
+
+    100% {
+        opacity: 0;
+        clip-path: inset(50% 0 50% 0);
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/* Lapisan sayatan horizontal Magenta (VRAM slice 2) berlawanan arah */
+@keyframes pgr-btn-glitch-slice-b {
+    0% {
+        opacity: 0.68;
+        background: linear-gradient(90deg, transparent, rgba(255, 42, 109, 0.78) 45%, transparent 92%);
+        clip-path: inset(58% 0 20% 0);
+        transform: translate3d(-7px, 0, 0);
+    }
+
+    35% {
+        opacity: 0.62;
+        background: rgba(255, 42, 109, 0.72);
+        clip-path: inset(20% 0 62% 0);
+        transform: translate3d(6px, 0, 0);
+    }
+
+    68% {
+        opacity: 0.45;
+        background: rgba(255, 255, 255, 0.65);
+        clip-path: inset(74% 0 12% 0);
+        transform: translate3d(-4px, 0, 0);
+    }
+
+    100% {
+        opacity: 0;
+        clip-path: inset(50% 0 50% 0);
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.pgr-btn-corners[data-btn-glitch='true']>.pgr-chamfer-sm {
+    animation: pgr-btn-glitch-face 240ms steps(1, end) 1;
+}
+
+.pgr-btn-corners[data-btn-glitch='true']>.pgr-chamfer-sm::before {
+    animation: pgr-btn-glitch-slice-a 230ms steps(1, end) 1;
+}
+
+.pgr-btn-corners[data-btn-glitch='true']>.pgr-chamfer-sm::after {
+    animation: pgr-btn-glitch-slice-b 230ms steps(1, end) 1;
+}
+
+/* Pembungkus persegi ikon sosial: spin ke belah ketupat (135deg) saat hover sementara ikon SVG tetap diam */
+.pgr-social-diamond-box {
+    transform: rotate(0deg) scale(1);
+    will-change: transform;
+}
+
+.pgr-social-diamond:hover .pgr-social-diamond-box,
+.pgr-social-diamond:focus-visible .pgr-social-diamond-box {
+    transform: rotate(135deg) scale(0.9);
+}
+
+/* Custom beveled tactical wing & chip shapes untuk tombol navigasi angle left/right */
+.pgr-wing-left {
+    clip-path: polygon(11px 0, 100% 0, 100% 100%, 11px 100%, 0 calc(100% - 11px), 0 11px);
+}
+
+.pgr-wing-right {
+    clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+}
+
+.pgr-chip-left {
+    clip-path: polygon(7px 0, 100% 0, 100% 100%, 7px 100%, 0 calc(100% - 7px), 0 7px);
+}
+
+.pgr-chip-right {
+    clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+}
+
+/* Diagonal split panels untuk section DOMAINS */
+@media (min-width: 1024px) {
+    .pgr-split-left {
+        clip-path: polygon(0 0, 62% 0, 44% 100%, 0 100%);
+    }
+
+    .pgr-split-right {
+        clip-path: polygon(62% 0, 100% 0, 100% 100%, 44% 100%);
+    }
+
+    .pgr-split-slash {
+        clip-path: polygon(61.75% 0, 62.25% 0, 44.25% 100%, 43.75% 100%);
+    }
+}
+
+/* Navigasi rail kiri ala PGR (transparan bersih tanpa glassmorphism) */
+.pgr-nav-item {
+    position: relative;
+    transition: color 220ms ease;
+}
+
+#pgr-sidebar-nav-rail[data-collapsed='true'] .pgr-rail-label {
+    opacity: 0;
+    transform: translateX(-8px);
+    pointer-events: none;
+}
+
+.pgr-nav-item[data-active='true'] {
+    color: #2563eb;
+}
+
+.dark .pgr-nav-item[data-active='true'],
+.pgr-skin-dark .pgr-nav-item[data-active='true'] {
+    color: #ffffff;
+}
+
+.pgr-skin-light .pgr-nav-item[data-active='true'] {
+    color: #2563eb;
+}
+
+/* ==========================================================================
+   Page-Level Load Balancing: Native CSS Containment & Offscreen Auto-Pause
+   ========================================================================== */
+
+[data-pgr-section] {
+    contain: layout style paint;
+    content-visibility: auto;
+    contain-intrinsic-block-size: 100dvh;
+}
+
+/* Hentikan animasi infinite pada section non-aktif agar CPU/GPU fokus ke halaman aktif */
+[data-pgr-section][data-section-active='false'] *,
+[data-pgr-section][data-section-active='false'] *::before,
+[data-pgr-section][data-section-active='false'] *::after {
+    animation-play-state: paused !important;
+}
+
+/* ==========================================================================
+   Section 05 (FEATURES): 3D Coverflow Depth Carousel + Multi-Layer Parallax
+   ========================================================================== */
+
+.pgr-carousel-stage {
+    perspective: 1400px;
+    transform-style: preserve-3d;
+}
+
+.pgr-carousel-card {
+    position: absolute;
+    inset-block: 0;
+    left: 50%;
+    width: min(100%, 44rem);
+    transform-style: preserve-3d;
+    transition:
+        transform 680ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 480ms ease;
+    will-change: transform, opacity;
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+    .pgr-carousel-card {
+        width: min(calc(100% - 8rem), 40rem);
+    }
+}
+
+/* Tanpa filter: blur() — 100% GPU compositor-only agar 60/120fps stabil */
+.pgr-carousel-card[data-slot='active'] {
+    z-index: 30;
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+    pointer-events: auto;
+}
+
+.pgr-carousel-card[data-slot='prev'] {
+    z-index: 15;
+    opacity: 0;
+    transform: translate3d(-112%, 0, -220px) scale(0.74) rotateY(18deg);
+    pointer-events: none;
+}
+
+.pgr-carousel-card[data-slot='next'] {
+    z-index: 15;
+    opacity: 0;
+    transform: translate3d(12%, 0, -220px) scale(0.74) rotateY(-18deg);
+    pointer-events: none;
+}
+
+.pgr-carousel-card[data-slot='back'] {
+    z-index: 5;
+    opacity: 0;
+    transform: translate3d(-50%, 0, -380px) scale(0.58);
+    pointer-events: none;
+    visibility: hidden;
+}
+
+@media (min-width: 768px) {
+    .pgr-carousel-card[data-slot='prev'] {
+        opacity: 0.46;
+        transform: translate3d(-102%, 0, -210px) scale(0.76) rotateY(18deg);
+        pointer-events: auto;
+    }
+
+    .pgr-carousel-card[data-slot='next'] {
+        opacity: 0.46;
+        transform: translate3d(2%, 0, -210px) scale(0.76) rotateY(-18deg);
+        pointer-events: auto;
+    }
+
+    .pgr-carousel-card[data-slot='prev']:hover {
+        opacity: 0.78;
+        transform: translate3d(-98%, 0, -170px) scale(0.8) rotateY(13deg);
+    }
+
+    .pgr-carousel-card[data-slot='next']:hover {
+        opacity: 0.78;
+        transform: translate3d(-2%, 0, -170px) scale(0.8) rotateY(-13deg);
+    }
+}
+
+/* Matikan interaksi tombol dalam kartu samping agar klik kartu langsung menggeser ke tengah */
+.pgr-carousel-card:not([data-slot='active']) button,
+.pgr-carousel-card:not([data-slot='active']) a {
+    pointer-events: none;
+}
+
+.pgr-tilt-inner {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    transform-style: preserve-3d;
+}
+
+.pgr-parallax-layer {
+    transform-style: preserve-3d;
+}
+
+/* Promosikan GPU layer (will-change) HANYA pada kartu aktif untuk hemat VRAM */
+.pgr-carousel-card[data-slot='active'] .pgr-tilt-inner,
+.pgr-carousel-card[data-slot='active'] .pgr-parallax-layer,
+.pgr-carousel-card[data-slot='active'] .pgr-card-glare {
+    will-change: transform;
+}
+
+.pgr-carousel-card:not([data-slot='active']) .pgr-tilt-inner,
+.pgr-carousel-card:not([data-slot='active']) .pgr-parallax-layer {
+    transition: transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Pre-painted radial glare bergerak murni lewat GPU translate3d (0 repaint/frame) */
+.pgr-card-glare {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 440px;
+    height: 440px;
+    margin-left: -220px;
+    margin-top: -220px;
+    pointer-events: none;
+    background: radial-gradient(circle,
+            rgb(96 165 250 / 0.18) 0%,
+            rgb(255 255 255 / 0.1) 38%,
+            transparent 70%);
+    opacity: 0;
+    transition: opacity 260ms ease;
+}
+
+/* Desktop full-viewport snapping container */
+@media (min-width: 1024px) {
+
+    html.pgr-snap-lock,
+    body.pgr-snap-lock {
+        overflow: clip;
+        height: 100dvh;
+    }
+
+    .pgr-viewport-track {
+        transition: transform 780ms cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+    }
+}
+
+/* Subtle HUD animations */
+@keyframes pgr-float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes pgr-spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pgr-spin-reverse {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes pgr-pulse-bar {
+
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes pgr-click-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(0.35) rotate(45deg);
+        opacity: 0.85;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1.7) rotate(45deg);
+        opacity: 0;
+    }
+}
+
+.animate-pgr-float {
+    animation: pgr-float 6s ease-in-out infinite;
+}
+
+.animate-pgr-spin-slow {
+    animation: pgr-spin-slow 72s linear infinite;
+}
+
+.animate-pgr-spin-reverse {
+    animation: pgr-spin-reverse 48s linear infinite;
+}
+
+/* Home 3D Cylindrical Star-Trail & Curved Tech Tunnel (searah jarum jam, 100% GPU compositor) */
+@keyframes pgr-tunnel-cw {
+    0% {
+        opacity: 0;
+        transform: scale(0.5) rotate(var(--rot-start, 0deg));
+    }
+
+    18% {
+        opacity: 0.56;
+        transform: scale(0.62) rotate(calc(var(--rot-start, 0deg) + 9deg));
+    }
+
+    46% {
+        opacity: 0.72;
+        transform: scale(0.84) rotate(calc(var(--rot-start, 0deg) + 23deg));
+    }
+
+    74% {
+        opacity: 0.48;
+        transform: scale(1.18) rotate(calc(var(--rot-start, 0deg) + 37deg));
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.74) rotate(calc(var(--rot-start, 0deg) + 52deg));
+    }
+}
+
+.pgr-tunnel-ring {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+}
+
+.pgr-tunnel-cw {
+    animation: pgr-tunnel-cw 28s linear infinite;
+}
+
+.animate-pgr-pulse-bar {
+    animation: pgr-pulse-bar 2.4s ease-in-out infinite;
+}
+
+#pgr-sao-binary-canvas {
+    contain: strict;
+    will-change: transform;
+}
+
+.pgr-click-ripple {
+    position: fixed;
+    width: 24px;
+    height: 24px;
+    border: 1.5px solid #60a5fa;
+    pointer-events: none;
+    z-index: 9999;
+    animation: pgr-click-ring 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dark .pgr-click-ripple {
+    border-color: #d4d4d8;
+}
+
+/* ==========================================================================
+   Theme Switch: True Per-Element Digital HUD Glitch Transition
+   ========================================================================== */
+
+/* Matikan transition CSS selama glitch berlangsung agar setiap loncatan/flicker benar-benar tajam 0ms */
+html.pgr-glitch-active *,
+html.pgr-glitch-active *::before,
+html.pgr-glitch-active *::after {
+    transition: none !important;
+}
+
+.pgr-glitch-el {
+    will-change: translate, clip-path, filter, opacity;
+}
+
+/* Lapisan gangguan sinyal VRAM & scanline tipis (tanpa menutupi elemen yang sedang glitch) */
+.pgr-glitch-hud {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pgr-glitch-scanlines {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(to bottom,
+            transparent 0px,
+            transparent 2px,
+            rgba(15, 23, 42, 0.08) 2px,
+            rgba(15, 23, 42, 0.08) 3px);
+    opacity: 0.85;
+}
+
+.dark .pgr-glitch-scanlines {
+    background-image: repeating-linear-gradient(to bottom,
+            transparent 0px,
+            transparent 2px,
+            rgba(255, 255, 255, 0.06) 2px,
+            rgba(255, 255, 255, 0.06) 3px);
+}
+
+/* Batang gangguan horizontal (VRAM tear bars) yang berpindah acak per tick */
+.pgr-glitch-bar {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    opacity: 0;
+    will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .pgr-viewport-track,
+    .pgr-carousel-card,
+    .pgr-tunnel-ring,
+    .pgr-btn-corners>.pgr-chamfer-sm,
+    .pgr-btn-corners>.pgr-chamfer-sm::before,
+    .pgr-btn-corners>.pgr-chamfer-sm::after,
+    .pgr-social-diamond-box,
+    .animate-pgr-float,
+    .animate-pgr-spin-slow,
+    .animate-pgr-spin-reverse,
+    .animate-pgr-pulse-bar {
+        animation: none !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    .pgr-tunnel-ring {
+        opacity: 0.45 !important;
+        transform: scale(var(--static-scale, 0.9)) rotate(var(--rot-start, 0deg)) !important;
+    }
+}
