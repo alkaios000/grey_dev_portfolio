@@ -123,7 +123,7 @@
                                 data-z="24"
                                 class="pgr-parallax-layer pointer-events-none absolute inset-0 z-10"
                             >
-                                <div class="absolute right-8 top-16 hidden items-center gap-2 border border-blue-200/90 bg-white/95 px-2.5 py-1.5 shadow-[0_8px_18px_rgba(37,99,235,0.12)] dark:border-zinc-600 dark:bg-[#2a2e36]/95 sm:flex">
+                                <div class="absolute right-8 top-16 z-20 hidden items-center gap-2 border border-blue-200/90 bg-white/95 px-2.5 py-1.5 shadow-[0_8px_18px_rgba(37,99,235,0.12)] dark:border-zinc-600 dark:bg-[#2a2e36]/95 sm:flex">
                                     <span class="h-1.5 w-1.5 rounded-full bg-blue-500 dark:bg-zinc-300"></span>
                                     <span class="font-mono text-[9px] font-medium tracking-[0.2em] text-slate-700 dark:text-zinc-200">
                                         LAYER // {{ $project['number'] }}
@@ -135,26 +135,51 @@
                                     </span>
                                 </div>
 
-                                <svg
-                                    class="absolute right-5 top-1/2 hidden h-56 w-80 -translate-y-1/2 sm:block"
-                                    viewBox="0 0 340 220"
-                                    fill="none"
-                                >
-                                    <rect x="16" y="18" width="316" height="192" class="fill-blue-600/[0.06] dark:fill-black/35" />
-                                    <rect x="12" y="14" width="316" height="192" class="fill-white/90 stroke-slate-900/15 dark:fill-[#272b33]/92 dark:stroke-zinc-500/35" />
-                                    <line x1="12" y1="40" x2="328" y2="40" class="stroke-slate-900/12 dark:stroke-zinc-500/25" />
-                                    <circle cx="28" cy="27" r="3.5" fill="{{ $theme['stroke'] }}" />
-                                    <circle cx="40" cy="27" r="3" class="fill-slate-900/20 dark:fill-zinc-400/45" />
-                                    <circle cx="52" cy="27" r="3" class="fill-slate-900/14 dark:fill-zinc-400/25" />
-                                    <rect x="28" y="56" width="96" height="54" stroke="{{ $theme['stroke'] }}" stroke-opacity="0.6" class="fill-blue-50/90 dark:fill-[#323640]/85" />
-                                    <rect x="136" y="56" width="176" height="54" class="fill-white/75 stroke-slate-900/12 dark:fill-[#2f333d]/80 dark:stroke-zinc-500/25" />
-                                    <path d="M148 96 L182 78 L216 86 L254 66 L298 76" stroke="{{ $theme['stroke'] }}" stroke-width="2.2" />
-                                    <circle cx="254" cy="66" r="4" fill="{{ $theme['stroke'] }}" />
-                                    <rect x="28" y="122" width="284" height="18" class="fill-slate-900/5 dark:fill-zinc-300/12" />
-                                    <rect x="28" y="148" width="210" height="14" class="fill-slate-900/4 dark:fill-zinc-300/10" />
-                                    <rect x="28" y="170" width="142" height="12" fill="{{ $theme['stroke'] }}" fill-opacity="0.26" />
-                                    <path d="M294 202 L324 172" stroke="{{ $theme['stroke'] }}" stroke-width="1.5" opacity="0.55" />
-                                </svg>
+                                @if (!empty($project['image_url']))
+                                    {{-- Real Uploaded Tool Photo (3D Parallax Floating Frame Desktop + Soft Ambient Mobile) --}}
+                                    <div class="absolute inset-0 overflow-hidden sm:hidden">
+                                        <img
+                                            src="{{ $project['image_url'] }}"
+                                            alt="{{ $project['title'] }}"
+                                            loading="lazy"
+                                            class="h-full w-full object-cover opacity-22 dark:opacity-25"
+                                        >
+                                        <div class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-white/45 dark:from-[#1a1d22] dark:via-[#22252b]/82 dark:to-[#2c3038]/45"></div>
+                                    </div>
+
+                                    <div class="pgr-chamfer absolute right-5 top-1/2 hidden h-52 w-80 -translate-y-1/2 overflow-hidden border border-blue-200/90 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] dark:border-zinc-500/75 dark:bg-[#1f2228] dark:shadow-[0_22px_48px_rgba(0,0,0,0.62)] sm:block">
+                                        <img
+                                            src="{{ $project['image_url'] }}"
+                                            alt="{{ $project['title'] }}"
+                                            loading="lazy"
+                                            class="h-full w-full object-cover"
+                                        >
+                                        <div class="absolute inset-0 bg-gradient-to-r from-white/45 via-transparent to-transparent dark:from-[#1c1f25]/55"></div>
+                                        <span aria-hidden="true" class="absolute left-0 top-0 h-4 w-4 border-l-2 border-t-2 border-blue-500 dark:border-zinc-200"></span>
+                                        <span aria-hidden="true" class="absolute bottom-0 right-0 h-4 w-4 border-b-2 border-r-2 border-sky-400 dark:border-zinc-400"></span>
+                                    </div>
+                                @else
+                                    <svg
+                                        class="absolute right-5 top-1/2 hidden h-56 w-80 -translate-y-1/2 sm:block"
+                                        viewBox="0 0 340 220"
+                                        fill="none"
+                                    >
+                                        <rect x="16" y="18" width="316" height="192" class="fill-blue-600/[0.06] dark:fill-black/35" />
+                                        <rect x="12" y="14" width="316" height="192" class="fill-white/90 stroke-slate-900/15 dark:fill-[#272b33]/92 dark:stroke-zinc-500/35" />
+                                        <line x1="12" y1="40" x2="328" y2="40" class="stroke-slate-900/12 dark:stroke-zinc-500/25" />
+                                        <circle cx="28" cy="27" r="3.5" fill="{{ $theme['stroke'] }}" />
+                                        <circle cx="40" cy="27" r="3" class="fill-slate-900/20 dark:fill-zinc-400/45" />
+                                        <circle cx="52" cy="27" r="3" class="fill-slate-900/14 dark:fill-zinc-400/25" />
+                                        <rect x="28" y="56" width="96" height="54" stroke="{{ $theme['stroke'] }}" stroke-opacity="0.6" class="fill-blue-50/90 dark:fill-[#323640]/85" />
+                                        <rect x="136" y="56" width="176" height="54" class="fill-white/75 stroke-slate-900/12 dark:fill-[#2f333d]/80 dark:stroke-zinc-500/25" />
+                                        <path d="M148 96 L182 78 L216 86 L254 66 L298 76" stroke="{{ $theme['stroke'] }}" stroke-width="2.2" />
+                                        <circle cx="254" cy="66" r="4" fill="{{ $theme['stroke'] }}" />
+                                        <rect x="28" y="122" width="284" height="18" class="fill-slate-900/5 dark:fill-zinc-300/12" />
+                                        <rect x="28" y="148" width="210" height="14" class="fill-slate-900/4 dark:fill-zinc-300/10" />
+                                        <rect x="28" y="170" width="142" height="12" fill="{{ $theme['stroke'] }}" fill-opacity="0.26" />
+                                        <path d="M294 202 L324 172" stroke="{{ $theme['stroke'] }}" stroke-width="1.5" opacity="0.55" />
+                                    </svg>
+                                @endif
                             </div>
 
                             {{-- LAYER 2 (HUD FRAME & TOP METADATA): Corner Reticles + Top Row --}}

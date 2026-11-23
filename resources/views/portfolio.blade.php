@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Portofolio resmi Grey_dev.">
-    <title>Grey_dev — Portfolio</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="{{ $site['meta_description'] ?? 'Portofolio resmi Grey_dev.' }}">
+    <title>{{ $site['brand_name'] ?? 'Grey_dev' }} — Portfolio</title>
 
     {{-- Sinkronisasi tema awal sebelum render agar bebas flash (FOUC) --}}
     <script>

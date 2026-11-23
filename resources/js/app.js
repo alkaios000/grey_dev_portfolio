@@ -215,11 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Wheel snapping pada desktop (tetap transisi scroll/slide halus, bukan glitch)
+    // Wheel snapping pada desktop (khusus halaman publik yang memiliki #pgr-track)
     window.addEventListener(
         'wheel',
         (event) => {
-            if (!isDesktop() || isAnyModalOpen()) {
+            if (!track || !totalSections || !isDesktop() || isAnyModalOpen()) {
                 return;
             }
 
@@ -456,7 +456,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if (pinnedHeader && sectionIndex > 0) roots.push(pinnedHeader);
             const targetSection = sections[sectionIndex];
-            if (targetSection) roots.push(targetSection);
+            if (targetSection) {
+                roots.push(targetSection);
+            } else {
+                const fallbackHeader = document.querySelector('header');
+                const fallbackMain = document.querySelector('main');
+                if (fallbackHeader) roots.push(fallbackHeader);
+                if (fallbackMain) roots.push(fallbackMain);
+            }
         }
 
         const vw = window.innerWidth;
@@ -1256,6 +1263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 100% Canvas GPU Glyph Sprite Atlas (0 SVG re-rasterization, 0 GC allocation,
     // ribuan bit 0/1 mutasi skala milidetik, & auto-governor FPS + 0% CPU offscreen)
     // =========================================================================
+    let triggerSaoTunnelWarp = null;
     const saoCanvas = document.getElementById('pgr-sao-binary-canvas');
     if (saoCanvas) {
         const ctx = saoCanvas.getContext('2d', { alpha: true, desynchronized: true });
@@ -1384,6 +1392,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let saoRafId = null;
             let lastNow = 0;
             let homeInViewport = true;
+            let warpStartTs = null;
+            const WARP_DURATION_MS = 1120;
 
             const renderSaoFrame = (now, isStaticSnapshot = false) => {
                 const frameStart = performance.now();
@@ -1391,10 +1401,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastNow = now;
                 const dtSec = dtMs * 0.001;
 
+                const warpT = !isStaticSnapshot && warpStartTs !== null
+                    ? Math.min(1, Math.max(0, (now - warpStartTs) / WARP_DURATION_MS))
+                    : 0;
+                const warpEase = warpT * warpT * (2.2 - 1.2 * warpT);
+                const isWarping = warpT > 0;
+
                 rebuildGlyphAtlas(false);
 
                 // Adaptive Load Balancer: jaga 60/120fps dengan menurunkan densitas otomatis bila perangkat berat
-                if (!isStaticSnapshot) {
+                if (!isStaticSnapshot && !isWarping) {
                     emaFrameMs = emaFrameMs * 0.9 + dtMs * 0.1;
                     if (frameCounter > 20 && frameCounter % 15 === 0) {
                         if (emaRenderMs > 5.5 || emaFrameMs > 22) {
@@ -1405,19 +1421,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                const activeCount = Math.max(24, Math.round(MAX_STREAMS * quality));
+                const activeCount = isWarping ? MAX_STREAMS : Math.max(24, Math.round(MAX_STREAMS * quality));
                 ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
                 ctx.clearRect(0, 0, viewW, viewH);
 
                 const isDarkNow = lastDarkFlag === true;
-                const ratioMaxMin = rMax / rMin;
-                const twoPi = Math.PI * 2;
+                // Saat warp dive: radius dalam menguncup ke titik pusat lorong sehingga aliran bit meluncur tepat dari depan mata
+                const effRMin = isWarping ? Math.max(28, rMin * (1 - warpEase * 0.82)) : rMin;
+                const ratioMaxMin = rMax / effRMin;
                 const invCellH = 1 / CELL_H;
+                const zSpeedMult = isWarping ? 1 + warpEase * 13.5 : 1;
+                const angSpeedMult = isWarping ? 1 + warpEase * 2.8 : 1;
+                const bitFlipMult = isWarping ? 1 + warpEase * 3.0 : 1;
 
                 for (let i = 0; i < activeCount; i++) {
                     if (!isStaticSnapshot) {
-                        streamZ[i] += streamZSpeed[i] * dtSec;
-                        streamAngle[i] += streamAngSpeed[i] * dtSec;
+                        streamZ[i] += streamZSpeed[i] * zSpeedMult * dtSec;
+                        streamAngle[i] += streamAngSpeed[i] * angSpeedMult * dtSec;
                         if (streamZ[i] >= 1) {
                             initStream(i, false);
                         }
@@ -1433,8 +1453,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const base = i * MAX_BITS_PER_STREAM;
                     const bitCount = streamBitCount[i];
 
-                    const radius = rMin * Math.pow(ratioMaxMin, z);
-                    const glyphScale = 0.42 + z * 0.52;
+                    const radius = effRMin * Math.pow(ratioMaxMin, z);
+                    const glyphScale = (0.42 + z * 0.52) * (1 + warpEase * 0.45);
                     const glyphW = CELL_W * glyphScale;
                     const glyphH = CELL_H * glyphScale;
                     const charStepArc = glyphW * 0.52;
@@ -1445,16 +1465,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Garis sinyal karier super transparan di belakang tech stack
                     const tint = streamTint[i];
                     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-                    ctx.globalAlpha = depthFade * (isDarkNow ? 0.075 : 0.085);
+                    ctx.globalAlpha = depthFade * ((isDarkNow ? 0.075 : 0.085) + warpEase * 0.22);
                     ctx.strokeStyle = paletteColors[tint];
-                    ctx.lineWidth = 0.65 + z * 0.35;
+                    ctx.lineWidth = 0.65 + z * 0.35 + warpEase * 0.7;
                     ctx.beginPath();
                     ctx.arc(centerX, centerY, radius - glyphH * 0.46, tailAngle, headAngle);
                     ctx.stroke();
 
+                    // Garis hyperspace radial saat masuk ke lorong (efek melesat menembus terowongan 3D)
+                    if (isWarping && warpEase > 0.05) {
+                        const streakCos = Math.cos(headAngle);
+                        const streakSin = Math.sin(headAngle);
+                        const streakInnerR = radius * Math.max(0.45, 1 - warpEase * 0.28);
+                        ctx.globalAlpha = depthFade * warpEase * (isDarkNow ? 0.42 : 0.38);
+                        ctx.lineWidth = 0.8 + z * 1.4;
+                        ctx.beginPath();
+                        ctx.moveTo(centerX + streakInnerR * streakCos, centerY + streakInnerR * streakSin);
+                        ctx.lineTo(centerX + radius * streakCos, centerY + radius * streakSin);
+                        ctx.stroke();
+                    }
+
                     // Gambar seluruh bit 0/1 di posisi tetap (per karakter berganti acak 0 <-> 1 tanpa geser kiri/kanan)
                     const srcY = tint * CELL_H;
-                    const maxAlpha = depthFade * (isDarkNow ? 0.29 : 0.27);
+                    const maxAlpha = depthFade * ((isDarkNow ? 0.29 : 0.27) + warpEase * 0.46);
                     const drawScale = glyphH * invCellH * dpr;
                     const halfSrcW = CELL_W * 0.5;
                     const halfSrcH = CELL_H * 0.5;
@@ -1467,7 +1500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             continue;
                         }
                         if (!isStaticSnapshot) {
-                            bitFlipCountdown[cellIdx] -= dtMs;
+                            bitFlipCountdown[cellIdx] -= dtMs * bitFlipMult;
                             if (bitFlipCountdown[cellIdx] <= 0) {
                                 val ^= 1;
                                 streamBits[cellIdx] = val;
@@ -1552,6 +1585,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.cancelAnimationFrame(saoRafId);
                     saoRafId = null;
                 }
+            };
+
+            triggerSaoTunnelWarp = () => {
+                warpStartTs = performance.now();
+                quality = 1.0;
+                homeInViewport = true;
+                syncSaoLoop();
             };
 
             // Resize debounced agar zero-jank
@@ -2438,27 +2478,382 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
+    // MODALS: PGR DIGITAL GLITCH MATERIALIZE (OPEN) & SIGNAL CUT-OFF (CLOSE)
+    // Berlaku seragam untuk semua modal Admin (Tambah/Edit/Hapus) & Kontak Publik
+    // =========================================================================
+    const modalGlitchCleanups = new WeakMap();
+
+    const cancelModalGlitch = (modal) => {
+        if (!modal) {
+            return;
+        }
+        const activeCleanup = modalGlitchCleanups.get(modal);
+        if (typeof activeCleanup === 'function') {
+            activeCleanup();
+        }
+    };
+
+    const isModalVisible = (modal) =>
+        Boolean(modal && !modal.classList.contains('hidden') && modal.dataset.modalState !== 'closing');
+
+    const runModalGlitch = (modal, mode) => {
+        if (!modal) {
+            return;
+        }
+        const isOpening = mode === 'open';
+        if (!isOpening && (modal.classList.contains('hidden') || modal.dataset.modalState === 'closing')) {
+            return;
+        }
+
+        // Pastikan glitch sebelumnya (jika ada) dihentikan & seluruh style/teks dipulihkan dulu
+        cancelModalGlitch(modal);
+        cancelAllBtnHoverGlitches();
+
+        if (isOpening) {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        const dialog = modal.querySelector('[data-pgr-modal-dialog]') || modal.firstElementChild;
+        if (prefersReducedMotion || !dialog) {
+            if (isOpening) {
+                modal.dataset.modalState = 'open';
+            } else {
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+                delete modal.dataset.modalState;
+            }
+            return;
+        }
+
+        modal.dataset.modalState = isOpening ? 'opening' : 'closing';
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const TOTAL_MS = isOpening ? 310 : 255;
+
+        const origModalOpacity = modal.style.opacity;
+        const origDialog = {
+            transform: dialog.style.transform,
+            translate: dialog.style.translate,
+            clipPath: dialog.style.clipPath,
+            filter: dialog.style.filter,
+            opacity: dialog.style.opacity,
+        };
+
+        // Kumpulkan elemen non-input untuk micro-jitter & teks heading/label untuk decode scramble
+        const subEls = Array.from(dialog.querySelectorAll('h3, p, label, button')).slice(0, 18);
+        const subStates = subEls.map((el) => ({
+            el,
+            origTranslate: el.style.translate,
+            origFilter: el.style.filter,
+            origOpacity: el.style.opacity,
+        }));
+
+        const textEntries = [];
+        const skipTags = new Set(['SVG', 'SCRIPT', 'STYLE', 'INPUT', 'TEXTAREA', 'SELECT', 'OPTION']);
+        const walker = document.createTreeWalker(dialog, NodeFilter.SHOW_TEXT);
+        let tNode = walker.nextNode();
+        while (tNode) {
+            const parent = tNode.parentElement;
+            const val = tNode.nodeValue || '';
+            const trimmed = val.trim();
+            if (
+                parent &&
+                !skipTags.has(parent.tagName) &&
+                !parent.closest('svg') &&
+                !parent.closest('select') &&
+                !parent.closest('textarea') &&
+                trimmed.length >= 2 &&
+                trimmed.length <= 42
+            ) {
+                textEntries.push({ node: tNode, orig: val });
+            }
+            tNode = walker.nextNode();
+        }
+        const activeTexts = textEntries.slice(0, 14);
+
+        // Lapisan scanlines + VRAM tear bars di dalam bingkai modal (.pgr-chamfer)
+        const overlay = document.createElement('div');
+        overlay.className = 'pgr-modal-glitch-overlay';
+        overlay.setAttribute('aria-hidden', 'true');
+
+        const scanlines = document.createElement('div');
+        scanlines.className = 'pgr-glitch-scanlines';
+        overlay.appendChild(scanlines);
+
+        const edgeFlash = document.createElement('div');
+        edgeFlash.className = 'pgr-modal-glitch-edge';
+        overlay.appendChild(edgeFlash);
+
+        const barColors = isDark
+            ? ['#141518', '#2a2d35', '#05d9e8', '#ff2a6d', 'rgba(244,244,245,0.82)']
+            : ['#ffffff', '#dbeafe', '#05d9e8', '#ff2a6d', 'rgba(37,99,235,0.65)'];
+        const bars = [];
+        for (let i = 0; i < 6; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'pgr-glitch-bar';
+            overlay.appendChild(bar);
+            bars.push(bar);
+        }
+        dialog.appendChild(overlay);
+
+        let rafId = null;
+        let nextTickMs = 0;
+        let nextBarTickMs = 0;
+        const startTs = performance.now();
+
+        const cleanup = (commitFinalState = true) => {
+            if (rafId) {
+                window.cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            modal.style.opacity = origModalOpacity;
+            dialog.style.transform = origDialog.transform;
+            dialog.style.translate = origDialog.translate;
+            dialog.style.clipPath = origDialog.clipPath;
+            dialog.style.filter = origDialog.filter;
+            dialog.style.opacity = origDialog.opacity;
+
+            subStates.forEach((st) => {
+                st.el.style.translate = st.origTranslate;
+                st.el.style.filter = st.origFilter;
+                st.el.style.opacity = st.origOpacity;
+            });
+            activeTexts.forEach((ts) => {
+                ts.node.nodeValue = ts.orig;
+            });
+
+            overlay.remove();
+            if (modalGlitchCleanups.get(modal) === abortCleanup) {
+                modalGlitchCleanups.delete(modal);
+            }
+
+            if (commitFinalState) {
+                if (isOpening) {
+                    modal.classList.remove('hidden');
+                    modal.setAttribute('aria-hidden', 'false');
+                    modal.dataset.modalState = 'open';
+                } else {
+                    modal.classList.add('hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                    delete modal.dataset.modalState;
+                }
+            }
+        };
+
+        const abortCleanup = () => cleanup(false);
+        modalGlitchCleanups.set(modal, abortCleanup);
+
+        const step = (now) => {
+            const elapsed = now - startTs;
+            const p = Math.min(1, elapsed / TOTAL_MS);
+
+            if (elapsed >= TOTAL_MS) {
+                cleanup(true);
+                return;
+            }
+
+            if (isOpening) {
+                // Backdrop muncul cepat dengan kedipan sinyal awal
+                modal.style.opacity = p < 0.14 ? '0.42' : p < 0.24 ? '0.88' : p < 0.31 ? '0.68' : '1';
+
+                if (elapsed >= nextTickMs) {
+                    nextTickMs = elapsed + randRange(24, 40);
+                    const intensity = Math.max(0.18, 1 - p * 0.85);
+
+                    if (p < 0.2) {
+                        // Burst inisialisasi CRT: terbelah horizontal lalu membuka cepat
+                        const sy = (0.18 + (p / 0.2) * 0.84).toFixed(2);
+                        const sx = (1.05 - (p / 0.2) * 0.05).toFixed(2);
+                        const skew = randRange(-10, 10).toFixed(1);
+                        const dx = Math.round(randRange(-22, 22));
+                        dialog.style.transform = `scale(${sx}, ${sy}) skewX(${skew}deg)`;
+                        dialog.style.translate = `${dx}px 0px`;
+                        dialog.style.clipPath = `inset(${Math.round(randRange(8, 28))}% 0 ${Math.round(randRange(8, 28))}% 0)`;
+                        dialog.style.filter =
+                            'contrast(1.38) drop-shadow(-4.5px 0 0 rgba(255, 42, 109, 0.92)) drop-shadow(4.5px 0 0 rgba(5, 217, 232, 0.92))';
+                        dialog.style.opacity = '0.92';
+                        edgeFlash.style.opacity = '0.88';
+                    } else if (p < 0.84) {
+                        // Fase glitch stabilisasi: potongan scanline + RGB split + jitter menyusut
+                        const isCalm = Math.random() < 0.22;
+                        if (isCalm) {
+                            dialog.style.transform = origDialog.transform;
+                            dialog.style.translate = origDialog.translate;
+                            dialog.style.clipPath = origDialog.clipPath;
+                            dialog.style.filter = origDialog.filter;
+                            dialog.style.opacity = '1';
+                            edgeFlash.style.opacity = '0.18';
+                        } else {
+                            const dx = Math.round(randRange(-18, 18) * intensity);
+                            const dy = Math.round(randRange(-3, 3) * intensity);
+                            const skew = (randRange(-6, 6) * intensity).toFixed(1);
+                            const rgb = (randRange(2.0, 4.8) * intensity).toFixed(1);
+                            dialog.style.transform = `skewX(${skew}deg)`;
+                            dialog.style.translate = `${dx}px ${dy}px`;
+                            if (Math.random() < 0.5) {
+                                const topCut = Math.random() < 0.5 ? Math.round(randRange(0, 26)) : 0;
+                                const botCut = topCut === 0 ? Math.round(randRange(8, 30)) : Math.round(randRange(0, 14));
+                                dialog.style.clipPath = `inset(${topCut}% 0 ${botCut}% 0)`;
+                            } else {
+                                dialog.style.clipPath = origDialog.clipPath;
+                            }
+                            dialog.style.filter =
+                                Math.random() < 0.14
+                                    ? 'invert(0.82) contrast(1.25)'
+                                    : `drop-shadow(${-rgb}px 0 0 rgba(255, 42, 109, 0.88)) drop-shadow(${rgb}px 0 0 rgba(5, 217, 232, 0.88))`;
+                            dialog.style.opacity = Math.random() < 0.16 ? '0.68' : '1';
+                            edgeFlash.style.opacity = (0.45 * intensity).toFixed(2);
+                        }
+                    } else {
+                        // Lock-in bersih
+                        dialog.style.transform = origDialog.transform;
+                        dialog.style.translate = origDialog.translate;
+                        dialog.style.clipPath = origDialog.clipPath;
+                        dialog.style.filter = origDialog.filter;
+                        dialog.style.opacity = '1';
+                        edgeFlash.style.opacity = '0';
+                    }
+
+                    // Micro-jitter & character decode pada elemen teks modal
+                    subStates.forEach((st) => {
+                        if (p < 0.78 && Math.random() < 0.42 * intensity) {
+                            const sdx = Math.round(randRange(-9, 9) * intensity);
+                            st.el.style.translate = `${sdx}px 0px`;
+                            st.el.style.filter =
+                                Math.random() < 0.5
+                                    ? 'drop-shadow(-2px 0 0 rgba(255,42,109,0.75)) drop-shadow(2px 0 0 rgba(5,217,232,0.75))'
+                                    : st.origFilter;
+                        } else {
+                            st.el.style.translate = st.origTranslate;
+                            st.el.style.filter = st.origFilter;
+                        }
+                    });
+
+                    activeTexts.forEach((ts) => {
+                        if (p < 0.72) {
+                            const ratio = randRange(0.18, 0.55) * (1 - p);
+                            ts.node.nodeValue = ratio < 0.08 ? ts.orig : scrambleString(ts.orig, ratio);
+                        } else {
+                            ts.node.nodeValue = ts.orig;
+                        }
+                    });
+                }
+            } else {
+                // MODE CLOSE: Destabilisasi sinyal -> CRT horizontal collapse & cut-off!
+                if (p >= 0.64) {
+                    const cp = (p - 0.64) / 0.36;
+                    const sy = Math.max(0.03, 1 - cp * 0.97).toFixed(3);
+                    const sx = (1 + cp * 0.09).toFixed(3);
+                    const dx = Math.round(randRange(-14, 14) * (1 - cp * 0.5));
+                    modal.style.opacity = Math.max(0, 1 - cp * 1.15).toFixed(2);
+                    dialog.style.transform = `scale(${sx}, ${sy})`;
+                    dialog.style.translate = `${dx}px 0px`;
+                    dialog.style.clipPath = origDialog.clipPath;
+                    dialog.style.filter =
+                        'brightness(1.85) contrast(1.4) drop-shadow(-6px 0 0 rgba(255, 42, 109, 0.95)) drop-shadow(6px 0 0 rgba(5, 217, 232, 0.95))';
+                    dialog.style.opacity = Math.max(0.12, 1 - cp * 0.85).toFixed(2);
+                    edgeFlash.style.opacity = '0.95';
+                } else if (elapsed >= nextTickMs) {
+                    nextTickMs = elapsed + randRange(22, 36);
+                    const ramp = 0.65 + (p / 0.64) * 0.65;
+                    const dx = Math.round(randRange(-24, 24) * ramp);
+                    const dy = Math.round(randRange(-3, 3));
+                    const skew = (randRange(-11, 11) * ramp).toFixed(1);
+                    const rgb = (randRange(2.4, 5.4) * ramp).toFixed(1);
+
+                    modal.style.opacity = Math.random() < 0.25 ? '0.68' : '0.96';
+                    dialog.style.transform = `skewX(${skew}deg)`;
+                    dialog.style.translate = `${dx}px ${dy}px`;
+
+                    if (Math.random() < 0.65) {
+                        const topCut = Math.random() < 0.5 ? Math.round(randRange(4, 34)) : 0;
+                        const botCut = topCut === 0 ? Math.round(randRange(10, 36)) : Math.round(randRange(4, 22));
+                        dialog.style.clipPath = `inset(${topCut}% 0 ${botCut}% 0)`;
+                    } else {
+                        dialog.style.clipPath = origDialog.clipPath;
+                    }
+
+                    dialog.style.filter =
+                        Math.random() < 0.2
+                            ? 'invert(0.88) contrast(1.3)'
+                            : `drop-shadow(${-rgb}px 0 0 rgba(255, 42, 109, 0.92)) drop-shadow(${rgb}px 0 0 rgba(5, 217, 232, 0.92))`;
+                    dialog.style.opacity = Math.random() < 0.22 ? randRange(0.35, 0.78).toFixed(2) : '1';
+                    edgeFlash.style.opacity = randRange(0.4, 0.85).toFixed(2);
+
+                    subStates.forEach((st) => {
+                        if (Math.random() < 0.5) {
+                            st.el.style.translate = `${Math.round(randRange(-12, 12) * ramp)}px 0px`;
+                            st.el.style.opacity = Math.random() < 0.28 ? '0.35' : st.origOpacity;
+                        } else {
+                            st.el.style.translate = st.origTranslate;
+                            st.el.style.opacity = st.origOpacity;
+                        }
+                    });
+
+                    activeTexts.forEach((ts) => {
+                        const ratio = Math.min(0.85, randRange(0.28, 0.68) * ramp);
+                        ts.node.nodeValue = scrambleString(ts.orig, ratio);
+                    });
+                }
+            }
+
+            // VRAM horizontal tear bars melesat di dalam area dialog modal
+            if (elapsed >= nextBarTickMs) {
+                nextBarTickMs = elapsed + randRange(20, 34);
+                const barIntensity = isOpening ? 1 - p * 0.75 : 0.7 + p * 0.5;
+                bars.forEach((bar) => {
+                    if (Math.random() < 0.72 * barIntensity) {
+                        const y = randRange(0, 96).toFixed(1);
+                        const h = Math.round(randRange(2, 16));
+                        const w = Math.round(randRange(24, 100));
+                        const x = Math.round(randRange(-10, 95 - w * 0.4));
+                        bar.style.top = `${y}%`;
+                        bar.style.height = `${h}px`;
+                        bar.style.width = `${w}%`;
+                        bar.style.transform = `translate3d(${x}%, 0, 0)`;
+                        bar.style.background = pickRandom(barColors);
+                        bar.style.opacity = randRange(0.28, 0.86).toFixed(2);
+                    } else {
+                        bar.style.opacity = '0';
+                    }
+                });
+            }
+
+            rafId = window.requestAnimationFrame(step);
+        };
+
+        rafId = window.requestAnimationFrame(step);
+    };
+
+    const openModalWithGlitch = (modal) => runModalGlitch(modal, 'open');
+    const closeModalWithGlitch = (modal) => runModalGlitch(modal, 'close');
+
+    // =========================================================================
     // MODALS (Contact Transmission)
     // =========================================================================
     const contactModal = document.getElementById('pgr-contact-modal');
+    const allPgrModals = Array.from(document.querySelectorAll('[data-pgr-modal]'));
 
     const isAnyModalOpen = () => {
         return (
             isProjectArchiveOpen() ||
             isToolDetailOpen() ||
-            Boolean(contactModal && !contactModal.classList.contains('hidden'))
+            allPgrModals.some((m) => isModalVisible(m))
         );
     };
 
     const closeAllModals = () => {
-        contactModal?.classList.add('hidden');
+        if (contactModal && isModalVisible(contactModal)) {
+            closeModalWithGlitch(contactModal);
+        }
     };
 
-    // Buka modal kontak transmisi
+    // Buka modal kontak transmisi dengan efek glitch
     document.querySelectorAll('[data-open-contact-modal]').forEach((btn) => {
         btn.addEventListener('click', (event) => {
             event.preventDefault();
-            contactModal?.classList.remove('hidden');
+            openModalWithGlitch(contactModal);
         });
     });
 
@@ -2488,16 +2883,572 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Simulasi kirim pesan transmisi (client-side preview agar form interaktif & aman)
+    // Kirim pesan transmisi nyata ke backend (tersimpan di Admin Inbox)
     const contactForm = document.getElementById('pgr-contact-form');
     const contactFeedback = document.getElementById('pgr-contact-feedback');
-    contactForm?.addEventListener('submit', (event) => {
+    contactForm?.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (contactFeedback) {
-            contactFeedback.classList.remove('hidden');
+        const submitBtn = contactForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const res = await fetch(contactForm.action || '/transmission', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: new FormData(contactForm),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (contactFeedback) {
+                contactFeedback.textContent = res.ok
+                    ? (data.message || 'SIGNAL RECEIVED // Pesan Anda telah tersimpan ke Command Inbox.')
+                    : (data.message || 'TRANSMISSION ERROR // Periksa kembali isian formulir.');
+                contactFeedback.classList.remove('hidden');
+            }
+            if (res.ok) {
+                contactForm.reset();
+            }
+        } catch {
+            if (contactFeedback) {
+                contactFeedback.textContent = 'SIGNAL ERROR // Gagal terhubung ke server transmisi.';
+                contactFeedback.classList.remove('hidden');
+            }
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
-        contactForm.reset();
     });
+
+    // Efek keluar mulus dari lorong saat tiba di halaman Admin Login / Command Console
+    if (document.body.dataset.pgrPage === 'admin' || document.body.dataset.pgrPage === 'admin-login') {
+        try {
+            if (sessionStorage.getItem('pgr-warp-arrived') === '1') {
+                sessionStorage.removeItem('pgr-warp-arrived');
+                if (!prefersReducedMotion) {
+                    document.documentElement.classList.add('pgr-warp-arriving');
+                    const curtain = document.createElement('div');
+                    curtain.className = 'pgr-warp-arrive-curtain';
+                    curtain.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(curtain);
+                    curtain.addEventListener('animationend', () => {
+                        curtain.remove();
+                        document.documentElement.classList.remove('pgr-warp-arriving');
+                    });
+                }
+            }
+        } catch {
+            // Abaikan bila sessionStorage dibatasi
+        }
+    }
+
+    // Secret Admin Trigger (persegi belah ketupat kecil di bawah Grey_dev di HOME):
+    // Animasi Link-Start melesat masuk ke lorong 3D bit biner & tech stack sebelum memasuki Admin!
+    const adminDiamondTrigger = document.getElementById('pgr-admin-diamond-trigger');
+    let isDivingIntoAdmin = false;
+
+    const spawnWarpTechRings = () => {
+        const tunnelStage = document.querySelector('#pgr-home-tunnel > div');
+        if (!tunnelStage) {
+            return;
+        }
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const isDarkNow = document.documentElement.classList.contains('dark');
+        const labelColor = isDarkNow ? '#e4e4e7' : '#2563eb';
+        const ringColor = isDarkNow ? 'rgba(212,212,216,0.45)' : 'rgba(59,130,246,0.42)';
+        const wordSets = [
+            ['ARTIFICIAL INTELLIGENCE', 'LARAVEL 13', 'NEURAL NETWORK', 'TAILWIND V4', 'SYSTEM CORE', 'PYTHON'],
+            ['COMMAND CONSOLE', 'MACHINE LEARNING', 'VITE 8', 'VECTOR DB', 'TYPESCRIPT', 'ACCESS GATE'],
+            ['LINK START', 'DEEP LEARNING', 'PHP 8.5', 'CLOUDFLARE', 'FASTAPI', 'GREY_DEV'],
+            ['01001101', 'SYNCHRONIZING', 'KERNEL SYNC', 'AUTH PORTAL', '10110010', 'OVERRIDE'],
+        ];
+        const offsets = ['8%', '25%', '42%', '59%', '76%', '92%'];
+
+        wordSets.forEach((words, idx) => {
+            const svg = document.createElementNS(SVG_NS, 'svg');
+            svg.setAttribute('viewBox', '0 0 1000 1000');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('class', 'pgr-warp-rush-ring font-mono');
+            svg.style.setProperty('--warp-rot', `${idx * 47}deg`);
+            svg.style.animationDelay = `${idx * 165}ms`;
+
+            const defs = document.createElementNS(SVG_NS, 'defs');
+            const pathId = `pgr-warp-path-${idx}`;
+            const path = document.createElementNS(SVG_NS, 'path');
+            path.setAttribute('id', pathId);
+            path.setAttribute('d', 'M 500,104 a 396,396 0 1,1 0,792 a 396,396 0 1,1 0,-792');
+            defs.appendChild(path);
+            svg.appendChild(defs);
+
+            const ringCircle = document.createElementNS(SVG_NS, 'circle');
+            ringCircle.setAttribute('cx', '500');
+            ringCircle.setAttribute('cy', '500');
+            ringCircle.setAttribute('r', '366');
+            ringCircle.setAttribute('stroke', ringColor);
+            ringCircle.setAttribute('stroke-width', '1.6');
+            ringCircle.setAttribute('stroke-dasharray', idx % 2 === 0 ? '26 14 4 18' : '12 10 2 14');
+            svg.appendChild(ringCircle);
+
+            words.forEach((word, wIdx) => {
+                const text = document.createElementNS(SVG_NS, 'text');
+                text.setAttribute('font-size', '11.5');
+                text.setAttribute('font-weight', '700');
+                text.setAttribute('letter-spacing', '3');
+                text.setAttribute('fill', labelColor);
+                text.setAttribute('fill-opacity', '0.88');
+
+                const tp = document.createElementNS(SVG_NS, 'textPath');
+                tp.setAttribute('href', `#${pathId}`);
+                tp.setAttribute('startOffset', offsets[wIdx % offsets.length]);
+                tp.setAttribute('text-anchor', 'middle');
+                tp.textContent = `· ${word}`;
+                text.appendChild(tp);
+                svg.appendChild(text);
+            });
+
+            tunnelStage.appendChild(svg);
+        });
+    };
+
+    adminDiamondTrigger?.addEventListener('click', (event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || prefersReducedMotion) {
+            return;
+        }
+        event.preventDefault();
+        if (isDivingIntoAdmin) {
+            return;
+        }
+        isDivingIntoAdmin = true;
+
+        const targetUrl = adminDiamondTrigger.getAttribute('href') || '/admin';
+        const rect = adminDiamondTrigger.getBoundingClientRect();
+        const cx = rect.left + rect.width * 0.5;
+        const cy = rect.top + rect.height * 0.5;
+
+        // 1. Shockwave belah ketupat keluar dari titik tengah
+        const shockwave = document.createElement('span');
+        shockwave.className = 'pgr-warp-shockwave';
+        shockwave.style.left = `${cx}px`;
+        shockwave.style.top = `${cy}px`;
+        document.body.appendChild(shockwave);
+
+        // 2. Aktifkan mode full-dive: HUD & hero melesat keluar, terowongan Tech Stack & kanvas Bit Biner akselerasi maju!
+        document.documentElement.classList.add('pgr-warp-diving');
+        triggerSaoTunnelWarp?.();
+        spawnWarpTechRings();
+
+        // 3. Cahaya ujung lorong (portal bloom) mengembang dari titik pusat menuju Admin
+        const flash = document.createElement('div');
+        flash.className = 'pgr-warp-portal-flash';
+        flash.style.setProperty('--warp-cx', `${cx}px`);
+        flash.style.setProperty('--warp-cy', `${cy}px`);
+        document.body.appendChild(flash);
+
+        try {
+            sessionStorage.setItem('pgr-warp-arrived', '1');
+        } catch {
+            // Abaikan bila sessionStorage dibatasi
+        }
+
+        window.setTimeout(() => {
+            window.location.assign(targetUrl);
+        }, 1060);
+    });
+
+    // =========================================================================
+    // ADMIN COMMAND CONSOLE CONTROLLER (PGR-Consistent Tabs, Glitch & Modals)
+    // =========================================================================
+    if (document.body.dataset.pgrPage === 'admin') {
+        const adminContent = document.getElementById('pgr-admin-content');
+        const adminTabTriggers = Array.from(document.querySelectorAll('[data-admin-tab-trigger]'));
+        const adminPanels = Array.from(document.querySelectorAll('[data-admin-panel]'));
+        const adminHeaderTitle = document.querySelector('[data-admin-header-title]');
+        const adminHeaderEvent = document.querySelector('[data-admin-header-event]');
+        const adminHeaderCode = document.querySelector('[data-admin-header-code]');
+        const adminProgress = document.getElementById('pgr-admin-progress');
+        const tabMeta = {
+            overview: { idx: 0, code: '01', event: 'COMMAND 01', title: 'COMMAND CONSOLE' },
+            home: { idx: 1, code: '02', event: 'COMMAND 02', title: 'HOME & PROFILE' },
+            project: { idx: 2, code: '03', event: 'COMMAND 03', title: 'PROJECT ARCHIVE' },
+            tools: { idx: 3, code: '04', event: 'COMMAND 04', title: 'TOOLS & DATA' },
+            others: { idx: 4, code: '05', event: 'COMMAND 05', title: 'OTHERS & INBOX' },
+        };
+        let currentAdminTab = document.body.dataset.adminActiveTab || 'overview';
+
+        const switchAdminTab = (nextTab, useGlitch = true) => {
+            if (!tabMeta[nextTab] || nextTab === currentAdminTab) {
+                closeMobileDrawer();
+                return;
+            }
+            const meta = tabMeta[nextTab];
+            const commitSwitch = () => {
+                currentAdminTab = nextTab;
+                document.body.dataset.adminActiveTab = nextTab;
+                adminPanels.forEach((panel) => {
+                    const match = panel.dataset.adminPanel === nextTab;
+                    panel.classList.toggle('hidden', !match);
+                    panel.classList.toggle('block', match);
+                });
+                if (adminHeaderTitle) adminHeaderTitle.textContent = meta.title;
+                if (adminHeaderEvent) adminHeaderEvent.textContent = meta.event;
+                if (adminHeaderCode) adminHeaderCode.textContent = meta.code;
+                if (adminProgress) adminProgress.style.width = `${((meta.idx + 1) / 5) * 100}%`;
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('tab', nextTab);
+                window.history.replaceState(null, '', nextUrl.toString());
+            };
+
+            adminTabTriggers.forEach((btn) => {
+                if (btn.hasAttribute('data-active')) {
+                    btn.dataset.active = btn.dataset.adminTabTrigger === nextTab ? 'true' : 'false';
+                }
+            });
+            closeMobileDrawer();
+
+            if (!useGlitch || !adminContent) {
+                commitSwitch();
+                return;
+            }
+
+            runGlitchViewSwap({
+                outgoingOpts: { rootOverride: adminContent },
+                onSwap: commitSwitch,
+                incomingOpts: { rootOverride: adminContent },
+                overlayRoot: adminContent,
+            });
+        };
+
+        adminTabTriggers.forEach((btn) => {
+            btn.addEventListener('click', () => switchAdminTab(btn.dataset.adminTabTrigger || 'overview', true));
+        });
+
+        // Project Sub-Tab Toggle (RELEASED <-> UNRELEASED) dengan glitch area konten saja
+        const adminProjTabs = Array.from(document.querySelectorAll('[data-admin-proj-tab]'));
+        const adminProjPanels = Array.from(document.querySelectorAll('[data-admin-proj-panel]'));
+        const adminProjWrap = document.getElementById('pgr-admin-project-grid-wrap');
+        let activeAdminProjTab = 'released';
+
+        adminProjTabs.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const nextSub = btn.dataset.adminProjTab === 'unreleased' ? 'unreleased' : 'released';
+                if (nextSub === activeAdminProjTab) return;
+                adminProjTabs.forEach((t) => {
+                    t.dataset.active = t.dataset.adminProjTab === nextSub ? 'true' : 'false';
+                });
+                const swapProjPanels = () => {
+                    activeAdminProjTab = nextSub;
+                    adminProjPanels.forEach((p) => {
+                        const match = p.dataset.adminProjPanel === nextSub;
+                        p.classList.toggle('hidden', !match);
+                        p.classList.toggle('grid', match);
+                    });
+                };
+                if (!adminProjWrap) {
+                    swapProjPanels();
+                    return;
+                }
+                runGlitchViewSwap({
+                    outgoingOpts: { rootOverride: adminProjWrap },
+                    onSwap: swapProjPanels,
+                    incomingOpts: { rootOverride: adminProjWrap },
+                    overlayRoot: adminProjWrap,
+                });
+            });
+        });
+
+        // Admin CRUD Modals (Project, Tool, Channel, Delete Confirm) dengan efek glitch buka & tutup
+        const adminModals = Array.from(document.querySelectorAll('[data-admin-modal]'));
+        let pendingDeleteForm = null;
+
+        const closeAdminModals = () => {
+            pendingDeleteForm = null;
+            adminModals.forEach((m) => {
+                if (isModalVisible(m)) {
+                    closeModalWithGlitch(m);
+                }
+            });
+        };
+
+        document.querySelectorAll('[data-close-admin-modal]').forEach((btn) => {
+            btn.addEventListener('click', closeAdminModals);
+        });
+        adminModals.forEach((modal) => {
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) closeAdminModals();
+            });
+        });
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeAdminModals();
+        });
+
+        // Tactical Delete Confirmation Modal (menggantikan browser confirm() agar seragam PGR + efek glitch)
+        const confirmModal = document.getElementById('pgr-admin-confirm-modal');
+        const confirmMessageEl = document.getElementById('pgr-confirm-modal-message');
+        const confirmTargetEl = document.getElementById('pgr-confirm-modal-target');
+        const confirmProceedBtn = document.getElementById('pgr-confirm-modal-proceed');
+
+        document.querySelectorAll('form[data-confirm-delete]').forEach((form) => {
+            form.addEventListener('submit', (event) => {
+                if (form.dataset.confirmed === 'true' || !confirmModal) {
+                    return;
+                }
+                event.preventDefault();
+                cancelModalGlitch(confirmModal);
+                pendingDeleteForm = form;
+                if (confirmMessageEl) {
+                    confirmMessageEl.textContent = form.dataset.confirmDelete || 'Hapus data ini secara permanen?';
+                }
+                if (confirmTargetEl) {
+                    confirmTargetEl.textContent = form.dataset.confirmTarget || 'RECORD';
+                }
+                openModalWithGlitch(confirmModal);
+            });
+        });
+
+        confirmProceedBtn?.addEventListener('click', () => {
+            if (!pendingDeleteForm) {
+                return;
+            }
+            const formToSubmit = pendingDeleteForm;
+            pendingDeleteForm = null;
+            formToSubmit.dataset.confirmed = 'true';
+            closeModalWithGlitch(confirmModal);
+            window.setTimeout(() => {
+                formToSubmit.submit();
+            }, prefersReducedMotion ? 0 : 180);
+        });
+
+        // Live Photo Upload Preview & Remove-Image Sync untuk Modal Project (pf), Tool (tf), & Channel (cf)
+        const activePreviewUrls = new Map();
+
+        const setModalImagePreview = (prefix, url, hasSavedImage = false) => {
+            const imgEl = document.getElementById(`${prefix}-image-preview-img`);
+            const emptyEl = document.getElementById(`${prefix}-image-preview-empty`);
+            const removeWrap = document.getElementById(`${prefix}-remove-image-wrap`);
+            const removeCheck = document.getElementById(`${prefix}-remove-image`);
+
+            const prevObjUrl = activePreviewUrls.get(prefix);
+            if (prevObjUrl && prevObjUrl !== url) {
+                URL.revokeObjectURL(prevObjUrl);
+                activePreviewUrls.delete(prefix);
+            }
+
+            if (imgEl && emptyEl) {
+                if (url) {
+                    imgEl.src = url;
+                    imgEl.dataset.savedUrl = hasSavedImage ? url : (imgEl.dataset.savedUrl || '');
+                    imgEl.classList.remove('hidden');
+                    emptyEl.classList.add('hidden');
+                } else {
+                    imgEl.removeAttribute('src');
+                    if (!hasSavedImage) {
+                        imgEl.dataset.savedUrl = '';
+                    }
+                    imgEl.classList.add('hidden');
+                    emptyEl.classList.remove('hidden');
+                }
+            }
+
+            if (removeWrap) {
+                removeWrap.classList.toggle('hidden', !hasSavedImage);
+                removeWrap.classList.toggle('inline-flex', Boolean(hasSavedImage));
+            }
+            if (removeCheck) {
+                removeCheck.checked = false;
+            }
+        };
+
+        document.querySelectorAll('[data-image-preview]').forEach((fileInput) => {
+            const prefix = fileInput.dataset.imagePreview;
+            if (!prefix) return;
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files?.[0];
+                const imgEl = document.getElementById(`${prefix}-image-preview-img`);
+                const removeCheck = document.getElementById(`${prefix}-remove-image`);
+                if (file) {
+                    const objUrl = URL.createObjectURL(file);
+                    const prev = activePreviewUrls.get(prefix);
+                    if (prev) URL.revokeObjectURL(prev);
+                    activePreviewUrls.set(prefix, objUrl);
+                    if (imgEl) {
+                        imgEl.src = objUrl;
+                        imgEl.classList.remove('hidden');
+                    }
+                    document.getElementById(`${prefix}-image-preview-empty`)?.classList.add('hidden');
+                    if (removeCheck) removeCheck.checked = false;
+                } else {
+                    const savedUrl = imgEl?.dataset.savedUrl || '';
+                    setModalImagePreview(prefix, savedUrl || null, Boolean(savedUrl));
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-image-remove]').forEach((checkbox) => {
+            const prefix = checkbox.dataset.imageRemove;
+            if (!prefix) return;
+            checkbox.addEventListener('change', () => {
+                const imgEl = document.getElementById(`${prefix}-image-preview-img`);
+                const emptyEl = document.getElementById(`${prefix}-image-preview-empty`);
+                const fileInput = document.getElementById(`${prefix}-image`);
+                if (checkbox.checked) {
+                    if (fileInput) fileInput.value = '';
+                    imgEl?.classList.add('hidden');
+                    emptyEl?.classList.remove('hidden');
+                } else if (imgEl?.dataset.savedUrl) {
+                    imgEl.src = imgEl.dataset.savedUrl;
+                    imgEl.classList.remove('hidden');
+                    emptyEl?.classList.add('hidden');
+                }
+            });
+        });
+
+        // Project Create/Edit Modal
+        const projectModal = document.getElementById('pgr-admin-project-modal');
+        const projectForm = document.getElementById('pgr-admin-project-form');
+        const projectMethod = document.getElementById('pgr-project-form-method');
+        const projectHeading = document.getElementById('pgr-project-modal-heading');
+        const projectSubmit = document.getElementById('pgr-project-modal-submit');
+
+        document.querySelectorAll('[data-open-project-modal]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (!projectModal || !projectForm) return;
+                cancelModalGlitch(projectModal);
+                const mode = btn.dataset.openProjectModal;
+                projectForm.reset();
+                if (mode === 'edit' && btn.dataset.projectPayload) {
+                    const p = JSON.parse(btn.dataset.projectPayload);
+                    projectForm.action = p.update_url;
+                    if (projectMethod) projectMethod.value = 'PUT';
+                    if (projectHeading) projectHeading.textContent = 'EDIT PROJECT';
+                    if (projectSubmit) projectSubmit.textContent = 'UPDATE PROJECT';
+                    document.getElementById('pf-group').value = p.group || 'released';
+                    document.getElementById('pf-accent').value = p.accent || 'blue';
+                    document.getElementById('pf-title').value = p.title || '';
+                    document.getElementById('pf-code').value = p.code || '';
+                    document.getElementById('pf-version').value = p.version || '';
+                    document.getElementById('pf-category').value = p.category || '';
+                    document.getElementById('pf-status-label').value = p.status_label || '';
+                    document.getElementById('pf-stack').value = p.stack_raw || '';
+                    document.getElementById('pf-description').value = p.description || '';
+                    document.getElementById('pf-url').value = p.project_url || '';
+                    document.getElementById('pf-published').checked = Boolean(p.is_published);
+                    setModalImagePreview('pf', p.image_url || null, Boolean(p.has_image));
+                } else {
+                    projectForm.action = projectForm.dataset.storeUrl || '/admin/projects';
+                    if (projectMethod) projectMethod.value = 'POST';
+                    if (projectHeading) projectHeading.textContent = 'ADD PROJECT';
+                    if (projectSubmit) projectSubmit.textContent = 'SAVE PROJECT';
+                    document.getElementById('pf-group').value = activeAdminProjTab;
+                    document.getElementById('pf-status-label').value =
+                        activeAdminProjTab === 'unreleased' ? 'UNRELEASED · IN DEV' : 'RELEASED · LIVE';
+                    document.getElementById('pf-published').checked = true;
+                    setModalImagePreview('pf', null, false);
+                }
+                openModalWithGlitch(projectModal);
+            });
+        });
+
+        // Tool Create/Edit Modal
+        const toolModal = document.getElementById('pgr-admin-tool-modal');
+        const toolForm = document.getElementById('pgr-admin-tool-form');
+        const toolMethod = document.getElementById('pgr-tool-form-method');
+        const toolHeading = document.getElementById('pgr-tool-modal-heading');
+        const toolSubmit = document.getElementById('pgr-tool-modal-submit');
+
+        document.querySelectorAll('[data-open-tool-modal]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (!toolModal || !toolForm) return;
+                cancelModalGlitch(toolModal);
+                const mode = btn.dataset.openToolModal;
+                toolForm.reset();
+                if (mode === 'edit' && btn.dataset.toolPayload) {
+                    const t = JSON.parse(btn.dataset.toolPayload);
+                    toolForm.action = t.update_url;
+                    if (toolMethod) toolMethod.value = 'PUT';
+                    if (toolHeading) toolHeading.textContent = 'EDIT TOOL';
+                    if (toolSubmit) toolSubmit.textContent = 'UPDATE TOOL';
+                    document.getElementById('tf-code').value = t.code || '';
+                    document.getElementById('tf-version').value = t.version || '';
+                    document.getElementById('tf-title').value = t.title || '';
+                    document.getElementById('tf-badge').value = t.badge || '';
+                    document.getElementById('tf-category').value = t.category || '';
+                    document.getElementById('tf-accent').value = t.accent || 'blue';
+                    document.getElementById('tf-faction').value = t.faction || '';
+                    document.getElementById('tf-type').value = t.type || '';
+                    document.getElementById('tf-description').value = t.description || '';
+                    document.getElementById('tf-highlights').value = t.highlights_raw || '';
+                    document.getElementById('tf-stack').value = t.stack_raw || '';
+                    document.getElementById('tf-published').checked = Boolean(t.is_published);
+                    const metrics = Array.isArray(t.metrics) ? t.metrics : [];
+                    for (let i = 0; i < 3; i++) {
+                        const ml = document.getElementById(`tf-ml-${i}`);
+                        const mv = document.getElementById(`tf-mv-${i}`);
+                        if (ml) ml.value = metrics[i]?.label || '';
+                        if (mv) mv.value = metrics[i]?.value ?? 92;
+                    }
+                    setModalImagePreview('tf', t.image_url || null, Boolean(t.has_image));
+                } else {
+                    toolForm.action = toolForm.dataset.storeUrl || '/admin/tools';
+                    if (toolMethod) toolMethod.value = 'POST';
+                    if (toolHeading) toolHeading.textContent = 'ADD TOOL';
+                    if (toolSubmit) toolSubmit.textContent = 'SAVE TOOL';
+                    document.getElementById('tf-published').checked = true;
+                    const defaults = ['ARCHITECTURE', 'SECURITY GUARD', 'RESPONSIVENESS'];
+                    for (let i = 0; i < 3; i++) {
+                        const ml = document.getElementById(`tf-ml-${i}`);
+                        const mv = document.getElementById(`tf-mv-${i}`);
+                        if (ml) ml.value = defaults[i];
+                        if (mv) mv.value = 94;
+                    }
+                    setModalImagePreview('tf', null, false);
+                }
+                openModalWithGlitch(toolModal);
+            });
+        });
+
+        // Channel Create/Edit Modal
+        const channelModal = document.getElementById('pgr-admin-channel-modal');
+        const channelForm = document.getElementById('pgr-admin-channel-form');
+        const channelMethod = document.getElementById('pgr-channel-form-method');
+        const channelHeading = document.getElementById('pgr-channel-modal-heading');
+        const channelSubmit = document.getElementById('pgr-channel-modal-submit');
+
+        document.querySelectorAll('[data-open-channel-modal]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (!channelModal || !channelForm) return;
+                cancelModalGlitch(channelModal);
+                const mode = btn.dataset.openChannelModal;
+                channelForm.reset();
+                if (mode === 'edit' && btn.dataset.channelPayload) {
+                    const c = JSON.parse(btn.dataset.channelPayload);
+                    channelForm.action = c.update_url;
+                    if (channelMethod) channelMethod.value = 'PUT';
+                    if (channelHeading) channelHeading.textContent = 'EDIT CHANNEL';
+                    if (channelSubmit) channelSubmit.textContent = 'UPDATE CHANNEL';
+                    document.getElementById('cf-code').value = c.code || '';
+                    document.getElementById('cf-type').value = c.type || 'link';
+                    document.getElementById('cf-title').value = c.title || '';
+                    document.getElementById('cf-subtitle').value = c.subtitle || '';
+                    document.getElementById('cf-description').value = c.description || '';
+                    document.getElementById('cf-action').value = c.action_label || '';
+                    document.getElementById('cf-href').value = c.href || '';
+                    document.getElementById('cf-target-section').value = c.target_section || 'projects';
+                    document.getElementById('cf-accent').value = c.accent || 'blue';
+                    document.getElementById('cf-published').checked = Boolean(c.is_published);
+                    setModalImagePreview('cf', c.image_url || null, Boolean(c.has_image));
+                } else {
+                    channelForm.action = channelForm.dataset.storeUrl || '/admin/channels';
+                    if (channelMethod) channelMethod.value = 'POST';
+                    if (channelHeading) channelHeading.textContent = 'ADD CHANNEL';
+                    if (channelSubmit) channelSubmit.textContent = 'SAVE CHANNEL';
+                    document.getElementById('cf-published').checked = true;
+                    setModalImagePreview('cf', null, false);
+                }
+                openModalWithGlitch(channelModal);
+            });
+        });
+    }
 
     // Subtle PGR diamond click reticle ripple
     if (!prefersReducedMotion) {
@@ -2514,63 +3465,65 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Inisialisasi awal berdasarkan hash URL (reset scroll bawaan browser agar snap presisi)
-    if ('scrollRestoration' in window.history) {
-        window.history.scrollRestoration = 'manual';
-    }
-    const initialHash = window.location.hash.replace('#', '').toLowerCase();
-    const initialToolMatch = initialHash.match(/^tool-(\d+)$/);
-    const initialProjectArchiveMatch = initialHash.match(/^project-(released|unreleased)$/);
-    const initialIdx = sections.findIndex((s) => s.dataset.pgrSection === initialHash);
-    handleViewportMode();
-    if (initialProjectArchiveMatch) {
-        showProjectArchiveImmediate(initialProjectArchiveMatch[1]);
-        setProjectIndex(0);
-    } else if (initialToolMatch) {
-        const toolNum = Math.max(0, Math.min(toolDetailSlides.length - 1, parseInt(initialToolMatch[1], 10) - 1));
-        showToolDetailImmediate(toolNum);
-    } else {
-        goToSection(initialIdx >= 0 ? initialIdx : 0, false, true);
-        setProjectIndex(0);
-    }
-    if (isDesktop()) {
-        requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
-    }
-
-    // Cegah native hash scroll menggeser viewport saat mode desktop snap aktif
-    const enforceDesktopTopScroll = () => {
-        if (isDesktop() && (window.scrollY !== 0 || document.documentElement.scrollTop !== 0)) {
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            document.documentElement.scrollTop = 0;
+    // Inisialisasi navigasi full-viewport (hanya pada halaman publik yang memiliki #pgr-track)
+    if (track && totalSections > 0) {
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
         }
-    };
-    window.addEventListener('load', enforceDesktopTopScroll);
-    window.addEventListener('scroll', enforceDesktopTopScroll, { passive: true });
-    window.addEventListener('hashchange', () => {
-        const nextHash = window.location.hash.replace('#', '').toLowerCase();
-        const archiveMatch = nextHash.match(/^project-(released|unreleased)$/);
-        if (archiveMatch) {
-            if (isToolDetailOpen()) hideToolDetailImmediate(false);
-            showProjectArchiveImmediate(archiveMatch[1]);
-            return;
-        }
-        const toolMatch = nextHash.match(/^tool-(\d+)$/);
-        if (toolMatch) {
-            if (isProjectArchiveOpen()) hideProjectArchiveImmediate(false);
-            const toolNum = Math.max(0, Math.min(toolDetailSlides.length - 1, parseInt(toolMatch[1], 10) - 1));
+        const initialHash = window.location.hash.replace('#', '').toLowerCase();
+        const initialToolMatch = initialHash.match(/^tool-(\d+)$/);
+        const initialProjectArchiveMatch = initialHash.match(/^project-(released|unreleased)$/);
+        const initialIdx = sections.findIndex((s) => s.dataset.pgrSection === initialHash);
+        handleViewportMode();
+        if (initialProjectArchiveMatch) {
+            showProjectArchiveImmediate(initialProjectArchiveMatch[1]);
+            setProjectIndex(0);
+        } else if (initialToolMatch) {
+            const toolNum = Math.max(0, Math.min(toolDetailSlides.length - 1, parseInt(initialToolMatch[1], 10) - 1));
             showToolDetailImmediate(toolNum);
-            return;
+        } else {
+            goToSection(initialIdx >= 0 ? initialIdx : 0, false, true);
+            setProjectIndex(0);
         }
-        if (isProjectArchiveOpen()) {
-            hideProjectArchiveImmediate(false);
+        if (isDesktop()) {
+            requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
         }
-        if (isToolDetailOpen()) {
-            hideToolDetailImmediate(false);
-        }
-        const nextIdx = sections.findIndex((s) => s.dataset.pgrSection === nextHash);
-        if (nextIdx >= 0 && nextIdx !== activeIndex) {
-            goToSection(nextIdx, false);
-        }
-    });
-    window.addEventListener('resize', handleViewportMode);
+
+        // Cegah native hash scroll menggeser viewport saat mode desktop snap aktif
+        const enforceDesktopTopScroll = () => {
+            if (isDesktop() && (window.scrollY !== 0 || document.documentElement.scrollTop !== 0)) {
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                document.documentElement.scrollTop = 0;
+            }
+        };
+        window.addEventListener('load', enforceDesktopTopScroll);
+        window.addEventListener('scroll', enforceDesktopTopScroll, { passive: true });
+        window.addEventListener('hashchange', () => {
+            const nextHash = window.location.hash.replace('#', '').toLowerCase();
+            const archiveMatch = nextHash.match(/^project-(released|unreleased)$/);
+            if (archiveMatch) {
+                if (isToolDetailOpen()) hideToolDetailImmediate(false);
+                showProjectArchiveImmediate(archiveMatch[1]);
+                return;
+            }
+            const toolMatch = nextHash.match(/^tool-(\d+)$/);
+            if (toolMatch) {
+                if (isProjectArchiveOpen()) hideProjectArchiveImmediate(false);
+                const toolNum = Math.max(0, Math.min(toolDetailSlides.length - 1, parseInt(toolMatch[1], 10) - 1));
+                showToolDetailImmediate(toolNum);
+                return;
+            }
+            if (isProjectArchiveOpen()) {
+                hideProjectArchiveImmediate(false);
+            }
+            if (isToolDetailOpen()) {
+                hideToolDetailImmediate(false);
+            }
+            const nextIdx = sections.findIndex((s) => s.dataset.pgrSection === nextHash);
+            if (nextIdx >= 0 && nextIdx !== activeIndex) {
+                goToSection(nextIdx, false);
+            }
+        });
+        window.addEventListener('resize', handleViewportMode);
+    }
 });

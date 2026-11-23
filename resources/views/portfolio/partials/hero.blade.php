@@ -1,26 +1,11 @@
 @php
-    // Pool lengkap 92+ Tech Stack & Artificial Intelligence (diacak ulang otomatis tiap siklus tabung via JS)
-    $techPool = [
-        // Artificial Intelligence & Machine Learning
-        'ARTIFICIAL INTELLIGENCE', 'MACHINE LEARNING', 'DEEP LEARNING', 'NEURAL NETWORK',
-        'GENERATIVE AI', 'LLM', 'TRANSFORMERS', 'LANGCHAIN', 'RAG', 'AI AGENTS',
-        'PYTORCH', 'TENSORFLOW', 'KERAS', 'SCIKIT-LEARN', 'HUGGING FACE', 'OPENAI',
-        'GEMINI AI', 'COMPUTER VISION', 'NLP', 'VECTOR DB', 'PROMPT ENGINEERING',
-        'FINE-TUNING', 'DIFFUSION', 'ONNX', 'CUDA', 'MLOPS', 'EMBEDDINGS', 'OPENCV',
-        // Web & Frontend Engineering
-        'HTML5', 'CSS3', 'JAVASCRIPT', 'TYPESCRIPT', 'REACT', 'NEXT.JS', 'VUE.JS',
-        'NUXT', 'SVELTE', 'ANGULAR', 'TAILWIND CSS', 'SASS', 'ALPINE.JS', 'LIVEWIRE',
-        'INERTIA.JS', 'BLADE', 'VITE', 'WEBPACK', 'THREE.JS', 'WEBGL', 'FIGMA', 'PWA',
-        // Backend & Core Languages
-        'LARAVEL', 'PHP', 'NODE.JS', 'EXPRESS', 'NESTJS', 'PYTHON', 'FASTAPI', 'DJANGO',
-        'GO', 'RUST', 'C++', 'JAVA', 'SPRING BOOT', 'KOTLIN', 'DART', 'FLUTTER', 'RUBY',
-        'REST API', 'GRAPHQL', 'GRPC', 'WEBSOCKET', 'OAUTH2', 'JWT', 'MICROSERVICES',
-        // Data, Cloud & DevOps
-        'MYSQL', 'POSTGRESQL', 'MONGODB', 'REDIS', 'SQLITE', 'PRISMA', 'ELASTICSEARCH',
-        'KAFKA', 'RABBITMQ', 'DOCKER', 'KUBERNETES', 'AWS', 'GCP', 'AZURE', 'CLOUDFLARE',
-        'VERCEL', 'SUPABASE', 'FIREBASE', 'NGINX', 'LINUX', 'GIT', 'GITHUB', 'CI/CD',
-        'TERRAFORM', 'COMPOSER', 'BUN',
+    // Pool lengkap Tech Stack & Artificial Intelligence dari database (diacak ulang otomatis tiap siklus tabung via JS)
+    $techPool = $site['tech_pool'] ?? [
+        'ARTIFICIAL INTELLIGENCE', 'MACHINE LEARNING', 'LARAVEL', 'TAILWIND CSS', 'VITE', 'PHP', 'PYTHON', 'TYPESCRIPT',
     ];
+    if (count($techPool) < 12) {
+        $techPool = array_merge($techPool, \App\Services\PortfolioContentService::defaultSiteSettings()['tech_pool']);
+    }
 
     $labelClasses = [
         'fill-blue-600 dark:fill-zinc-300',
@@ -228,22 +213,29 @@
     <div class="relative z-20 h-14 lg:h-[50px]"></div>
 
     {{-- Center Compact Hero (terpusat rapi di dalam mulut portal lingkaran inti) --}}
-    <div class="relative z-20 mx-auto my-auto flex w-full max-w-xl flex-col items-center px-5 text-center sm:px-6">
+    <div id="pgr-home-hero-core" class="relative z-20 mx-auto my-auto flex w-full max-w-xl flex-col items-center px-5 text-center transition-all duration-500 sm:px-6">
         {{-- Editorial Motto Quote di atas Grey_dev --}}
         <p class="mb-2.5 font-rpg text-xs tracking-[0.22em] text-slate-500 dark:text-zinc-400 sm:text-[13px] sm:tracking-[0.26em]">
-            <span class="text-blue-400 dark:text-zinc-400">&ldquo;</span>We Stand for Humanity<span class="text-blue-400 dark:text-zinc-400">&rdquo;</span>
+            <span class="text-blue-400 dark:text-zinc-400">&ldquo;</span>{{ $site['motto'] ?? 'We Stand for Humanity' }}<span class="text-blue-400 dark:text-zinc-400">&rdquo;</span>
         </p>
 
         {{-- Crisp Fantasy-RPG Brand Wordmark (Cinzel Decorative — abu-abu tua kebiruan / silver-gray di Dark Mode) --}}
         <h1 class="bg-gradient-to-br from-[#364760] via-[#3e567a] to-[#2d4870] bg-clip-text pb-1.5 font-brand text-[2.1rem] font-bold leading-tight tracking-[0.1em] text-transparent dark:from-zinc-100 dark:via-zinc-200 dark:to-zinc-400 sm:text-5xl sm:tracking-[0.13em] lg:text-[3.75rem]">
-            Grey_dev
+            {{ $site['brand_name'] ?? 'Grey_dev' }}
         </h1>
 
-        {{-- Subtle Modern Divider --}}
-        <div aria-hidden="true" class="mt-2 flex items-center gap-2.5">
-            <span class="h-px w-8 bg-gradient-to-r from-transparent to-blue-300/80 dark:to-zinc-500/80 sm:w-12"></span>
-            <span class="h-1.5 w-1.5 rotate-45 bg-blue-500 dark:bg-zinc-300"></span>
-            <span class="h-px w-8 bg-gradient-to-l from-transparent to-blue-300/80 dark:to-zinc-500/80 sm:w-12"></span>
+        {{-- Subtle Modern Divider: Klik belah ketupat kecil di tengah untuk membuka Admin Command Console --}}
+        <div class="mt-2 flex items-center gap-2.5">
+            <span aria-hidden="true" class="h-px w-8 bg-gradient-to-r from-transparent to-blue-300/80 dark:to-zinc-500/80 sm:w-12"></span>
+            <a
+                id="pgr-admin-diamond-trigger"
+                href="{{ route('admin.index') }}"
+                aria-label="Open Command Console"
+                class="group relative flex h-5 w-5 items-center justify-center focus:outline-none"
+            >
+                <span class="h-1.5 w-1.5 rotate-45 bg-blue-500 transition-transform duration-300 group-hover:scale-125 group-hover:rotate-[135deg] dark:bg-zinc-300"></span>
+            </a>
+            <span aria-hidden="true" class="h-px w-8 bg-gradient-to-l from-transparent to-blue-300/80 dark:to-zinc-500/80 sm:w-12"></span>
         </div>
 
         {{-- Refined Compact Action Duo --}}
@@ -301,7 +293,7 @@
 
             {{-- Center subtle wordmark --}}
             <p class="hidden font-mono text-[10px] tracking-[0.42em] text-slate-400/80 dark:text-zinc-500 xl:block">
-                GREY_DEV · STUDIO
+                {{ $site['studio_label'] ?? 'GREY_DEV · STUDIO' }}
             </p>
 
             {{-- Right social icons (GitHub, Email, WhatsApp, Instagram, TikTok) & availability --}}
@@ -309,11 +301,11 @@
                 <div class="flex items-center gap-2 text-slate-600 dark:text-zinc-300 sm:gap-2.5">
                     {{-- GitHub --}}
                     <a
-                        href="https://github.com/alkaios000"
+                        href="{{ $site['github_url'] ?? 'https://github.com/alkaios000' }}"
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="GitHub: alkaios000"
-                        aria-label="GitHub alkaios000 (Greymist_000)"
+                        title="GitHub"
+                        aria-label="GitHub"
                         class="pgr-social-diamond group relative flex h-7 w-7 items-center justify-center transition-colors duration-300 hover:text-blue-600 focus:outline-none dark:hover:text-white"
                     >
                         <span
@@ -327,9 +319,9 @@
 
                     {{-- Email --}}
                     <a
-                        href="mailto:greymistbeta010@gmail.com"
-                        title="Email: greymistbeta010@gmail.com"
-                        aria-label="Email greymistbeta010@gmail.com"
+                        href="mailto:{{ $site['contact_email'] ?? 'greymistbeta010@gmail.com' }}"
+                        title="Email: {{ $site['contact_email'] ?? 'greymistbeta010@gmail.com' }}"
+                        aria-label="Email"
                         class="pgr-social-diamond group relative flex h-7 w-7 items-center justify-center transition-colors duration-300 hover:text-blue-600 focus:outline-none dark:hover:text-white"
                     >
                         <span
@@ -344,11 +336,11 @@
 
                     {{-- WhatsApp --}}
                     <a
-                        href="https://wa.me/6285878523281"
+                        href="{{ $site['whatsapp_url'] ?? 'https://wa.me/6285878523281' }}"
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="WhatsApp: 085878523281"
-                        aria-label="WhatsApp 085878523281"
+                        title="WhatsApp"
+                        aria-label="WhatsApp"
                         class="pgr-social-diamond group relative flex h-7 w-7 items-center justify-center transition-colors duration-300 hover:text-blue-600 focus:outline-none dark:hover:text-white"
                     >
                         <span
@@ -362,11 +354,11 @@
 
                     {{-- Instagram --}}
                     <a
-                        href="https://www.instagram.com/ahmadnasuha62"
+                        href="{{ $site['instagram_url'] ?? 'https://www.instagram.com/ahmadnasuha62' }}"
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="Instagram: @ahmadnasuha62"
-                        aria-label="Instagram @ahmadnasuha62"
+                        title="Instagram"
+                        aria-label="Instagram"
                         class="pgr-social-diamond group relative flex h-7 w-7 items-center justify-center transition-colors duration-300 hover:text-blue-600 focus:outline-none dark:hover:text-white"
                     >
                         <span
@@ -382,11 +374,11 @@
 
                     {{-- TikTok --}}
                     <a
-                        href="https://www.tiktok.com/@nasuhaaa_000"
+                        href="{{ $site['tiktok_url'] ?? 'https://www.tiktok.com/@nasuhaaa_000' }}"
                         target="_blank"
                         rel="noopener noreferrer"
-                        title="TikTok: @nasuhaaa_000"
-                        aria-label="TikTok @nasuhaaa_000"
+                        title="TikTok"
+                        aria-label="TikTok"
                         class="pgr-social-diamond group relative flex h-7 w-7 items-center justify-center transition-colors duration-300 hover:text-blue-600 focus:outline-none dark:hover:text-white"
                     >
                         <span
@@ -401,7 +393,7 @@
 
                 <div class="hidden border-l border-slate-200/90 pl-3 text-right leading-tight dark:border-zinc-700 sm:block">
                     <p class="font-mono text-[8px] leading-none tracking-[0.22em] text-slate-400 dark:text-zinc-500">AVAILABILITY</p>
-                    <p class="mt-0.5 font-tech text-[11px] font-semibold leading-none tracking-[0.18em] text-slate-800 dark:text-zinc-200">OPEN FOR PROJECTS</p>
+                    <p class="mt-0.5 font-tech text-[11px] font-semibold leading-none tracking-[0.18em] text-slate-800 dark:text-zinc-200">{{ $site['availability_label'] ?? 'OPEN FOR PROJECTS' }}</p>
                 </div>
             </div>
         </div>

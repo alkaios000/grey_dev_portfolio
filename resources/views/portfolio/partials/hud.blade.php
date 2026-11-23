@@ -13,7 +13,7 @@
                 class="group flex shrink-0 items-center gap-2 text-left font-brand text-sm font-bold tracking-[0.14em] text-[#364b6b] transition-colors hover:text-blue-600 focus:outline-none dark:text-zinc-100 dark:hover:text-zinc-300 lg:text-[13px]"
             >
                 <span class="inline-block h-1.5 w-1.5 shrink-0 rotate-45 bg-blue-500 transition-colors group-hover:bg-blue-600 dark:bg-zinc-300 dark:group-hover:bg-white"></span>
-                <span>Grey_dev</span>
+                <span>{{ $site['brand_name'] ?? 'Grey_dev' }}</span>
             </button>
 
             {{-- Razor-Thin Progress Line (Full Bottom Edge on Mobile, Minimal Short Hairline on Desktop) --}}
@@ -124,7 +124,7 @@
             aria-hidden="true"
             class="pointer-events-none absolute inset-x-0 top-1 hidden select-none overflow-hidden text-center font-display text-5xl font-bold tracking-[0.28em] text-slate-900/[0.04] dark:text-white/[0.04] lg:block xl:text-6xl"
         >
-            GREY_DEV
+            {{ strtoupper($site['brand_name'] ?? 'GREY_DEV') }}
         </div>
 
         {{-- 3-Column Symmetric Grid: menjamin judul section selalu 100% dead-center --}}
@@ -151,7 +151,7 @@
                     PROJECT
                 </p>
                 <p class="mt-0.5 font-tech text-[10px] font-semibold tracking-[0.42em] text-blue-500 dark:text-zinc-400">
-                    GREY_DEV
+                    {{ strtoupper($site['brand_name'] ?? 'GREY_DEV') }}
                 </p>
             </div>
 
@@ -195,7 +195,7 @@
             <div class="flex items-center justify-between pb-4">
                 <span class="flex items-center gap-2 font-brand text-base font-bold tracking-[0.14em] text-[#364b6b] dark:text-zinc-100">
                     <span class="inline-block h-1.5 w-1.5 rotate-45 bg-blue-500 dark:bg-zinc-300"></span>
-                    <span>Grey_dev</span>
+                    <span>{{ $site['brand_name'] ?? 'Grey_dev' }}</span>
                 </span>
                 <button
                     id="pgr-mobile-menu-close"

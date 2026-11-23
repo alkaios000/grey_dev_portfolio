@@ -61,7 +61,7 @@
                     id="pgr-tool-detail-header-case"
                     class="whitespace-nowrap font-mono text-[11px] tracking-[0.22em] text-slate-500 dark:text-zinc-400"
                 >
-                    {{ $projects[0]['version'] }}
+                    {{ $projects[0]['version'] ?? 'CASE 01' }}
                 </span>
                 <div class="ml-1 flex shrink-0 items-center gap-1.5 border-l border-slate-200 pl-3 font-mono text-[11px] tracking-[0.18em] dark:border-zinc-700">
                     <span class="text-slate-400 dark:text-zinc-500">TOOL</span>
@@ -163,20 +163,33 @@
                             </span>
                         </div>
 
-                        {{-- Visual Emblem SVG --}}
-                        <div class="my-3.5 flex items-center justify-center">
-                            <div class="relative flex h-28 w-28 items-center justify-center">
-                                <svg class="animate-pgr-spin-slow absolute inset-0 h-full w-full" viewBox="0 0 160 160" fill="none">
-                                    <circle cx="80" cy="80" r="72" class="stroke-slate-900/15 dark:stroke-zinc-500/35" stroke-width="1" stroke-dasharray="6 8" />
-                                    <circle cx="80" cy="80" r="56" stroke="{{ $project['accentHex'] }}" stroke-width="1.3" stroke-dasharray="28 14" opacity="0.8" />
-                                </svg>
-                                <div class="relative flex h-20 w-20 rotate-45 items-center justify-center border border-blue-200 bg-white shadow-sm dark:border-zinc-500 dark:bg-[#2d313a]">
-                                    <span class="-rotate-45 font-display text-2xl font-bold text-slate-900 dark:text-zinc-100">
-                                        {{ $project['number'] }}
-                                    </span>
+                        {{-- Visual Cover Photo (jika diunggah) atau Emblem SVG --}}
+                        @if (!empty($project['image_url']))
+                            <div class="relative my-3.5 aspect-[16/10] w-full overflow-hidden border border-blue-200/90 bg-slate-100 shadow-xs dark:border-zinc-600 dark:bg-[#1a1c21]">
+                                <img
+                                    src="{{ $project['image_url'] }}"
+                                    alt="{{ $project['title'] }}"
+                                    loading="lazy"
+                                    class="h-full w-full object-cover"
+                                >
+                                <span aria-hidden="true" class="pointer-events-none absolute left-0 top-0 h-3.5 w-3.5 border-l-2 border-t-2 border-blue-500 dark:border-zinc-200"></span>
+                                <span aria-hidden="true" class="pointer-events-none absolute bottom-0 right-0 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-400 dark:border-zinc-400"></span>
+                            </div>
+                        @else
+                            <div class="my-3.5 flex items-center justify-center">
+                                <div class="relative flex h-28 w-28 items-center justify-center">
+                                    <svg class="animate-pgr-spin-slow absolute inset-0 h-full w-full" viewBox="0 0 160 160" fill="none">
+                                        <circle cx="80" cy="80" r="72" class="stroke-slate-900/15 dark:stroke-zinc-500/35" stroke-width="1" stroke-dasharray="6 8" />
+                                        <circle cx="80" cy="80" r="56" stroke="{{ $project['accentHex'] }}" stroke-width="1.3" stroke-dasharray="28 14" opacity="0.8" />
+                                    </svg>
+                                    <div class="relative flex h-20 w-20 rotate-45 items-center justify-center border border-blue-200 bg-white shadow-sm dark:border-zinc-500 dark:bg-[#2d313a]">
+                                        <span class="-rotate-45 font-display text-2xl font-bold text-slate-900 dark:text-zinc-100">
+                                            {{ $project['number'] }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @endif
 
                         {{-- Stat Bars --}}
                         <div class="flex flex-col gap-3">

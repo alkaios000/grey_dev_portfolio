@@ -105,24 +105,33 @@
                     >
                         {{-- Frame Gambar Utama (identik dengan kartu carousel PROJECT, bersih tanpa teks di atas gambar) --}}
                         <div class="relative aspect-[16/10] w-full overflow-hidden border border-slate-200/95 bg-gradient-to-br {{ $cardTheme['grad'] }} {{ $cardTheme['darkGrad'] }} shadow-[0_18px_42px_rgba(15,23,42,0.1)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-blue-400 dark:border-zinc-600/80 dark:shadow-[0_22px_50px_rgba(0,0,0,0.52)] dark:group-hover:border-zinc-400">
-                            <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
-                                <div class="absolute inset-0 pgr-fine-grid opacity-70"></div>
-                                <svg
-                                    class="absolute inset-0 h-full w-full p-5 opacity-80 transition-transform duration-500 group-hover:scale-[1.03]"
-                                    viewBox="0 0 320 200"
-                                    fill="none"
+                            @if (!empty($item['image_url']))
+                                <img
+                                    src="{{ $item['image_url'] }}"
+                                    alt="{{ $item['title'] }}"
+                                    loading="lazy"
+                                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                                 >
-                                    <rect x="20" y="18" width="280" height="164" class="fill-white/60 stroke-slate-900/12 dark:fill-[#262a33]/75 dark:stroke-zinc-500/35" />
-                                    <line x1="20" y1="44" x2="300" y2="44" class="stroke-slate-900/10 dark:stroke-zinc-500/25" />
-                                    <circle cx="36" cy="31" r="3.5" fill="{{ $cardTheme['stroke'] }}" />
-                                    <circle cx="49" cy="31" r="2.8" class="fill-slate-900/20 dark:fill-zinc-400/40" />
-                                    <circle cx="61" cy="31" r="2.8" class="fill-slate-900/15 dark:fill-zinc-500/35" />
-                                    <path d="M40 138 L98 98 L152 114 L212 72 L276 92" stroke="{{ $cardTheme['stroke'] }}" stroke-width="2.2" />
-                                    <circle cx="212" cy="72" r="4" fill="{{ $cardTheme['stroke'] }}" />
-                                    <rect x="40" y="152" width="128" height="10" fill="{{ $cardTheme['stroke'] }}" fill-opacity="0.22" />
-                                    <rect x="180" y="152" width="64" height="10" class="fill-slate-900/8 dark:fill-zinc-500/25" />
-                                </svg>
-                            </div>
+                            @else
+                                <div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
+                                    <div class="absolute inset-0 pgr-fine-grid opacity-70"></div>
+                                    <svg
+                                        class="absolute inset-0 h-full w-full p-5 opacity-80 transition-transform duration-500 group-hover:scale-[1.03]"
+                                        viewBox="0 0 320 200"
+                                        fill="none"
+                                    >
+                                        <rect x="20" y="18" width="280" height="164" class="fill-white/60 stroke-slate-900/12 dark:fill-[#262a33]/75 dark:stroke-zinc-500/35" />
+                                        <line x1="20" y1="44" x2="300" y2="44" class="stroke-slate-900/10 dark:stroke-zinc-500/25" />
+                                        <circle cx="36" cy="31" r="3.5" fill="{{ $cardTheme['stroke'] }}" />
+                                        <circle cx="49" cy="31" r="2.8" class="fill-slate-900/20 dark:fill-zinc-400/40" />
+                                        <circle cx="61" cy="31" r="2.8" class="fill-slate-900/15 dark:fill-zinc-500/35" />
+                                        <path d="M40 138 L98 98 L152 114 L212 72 L276 92" stroke="{{ $cardTheme['stroke'] }}" stroke-width="2.2" />
+                                        <circle cx="212" cy="72" r="4" fill="{{ $cardTheme['stroke'] }}" />
+                                        <rect x="40" y="152" width="128" height="10" fill="{{ $cardTheme['stroke'] }}" fill-opacity="0.22" />
+                                        <rect x="180" y="152" width="64" height="10" class="fill-slate-900/8 dark:fill-zinc-500/25" />
+                                    </svg>
+                                </div>
+                            @endif
 
                             <span aria-hidden="true" class="pointer-events-none absolute left-0 top-0 h-4 w-4 border-l-2 border-t-2 border-blue-500 dark:border-zinc-300"></span>
                             <span aria-hidden="true" class="pointer-events-none absolute bottom-0 right-0 h-4 w-4 border-b-2 border-r-2 border-sky-400 dark:border-zinc-500"></span>

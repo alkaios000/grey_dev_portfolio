@@ -1109,6 +1109,194 @@
     will-change: transform;
 }
 
+/* ==========================================================================
+   Admin Portal Dive: Masuk ke Lorong 3D Bit Biner & Tech Stack (Link Start!)
+   ========================================================================== */
+
+html.pgr-warp-diving,
+html.pgr-warp-diving * {
+    pointer-events: none !important;
+}
+
+html.pgr-warp-diving #pgr-home-hero-core {
+    opacity: 0;
+    transform: scale(1.42);
+    transition:
+        transform 460ms cubic-bezier(0.32, 0, 0.72, 0.25),
+        opacity 320ms ease;
+}
+
+html.pgr-warp-diving #pgr-hud-chrome {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0);
+    transition: transform 380ms ease, opacity 300ms ease;
+}
+
+html.pgr-warp-diving #pgr-home-bottom-bar {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    transition: transform 380ms ease, opacity 300ms ease;
+}
+
+html.pgr-warp-diving #pgr-home-tunnel {
+    opacity: 1 !important;
+    transition: opacity 280ms ease;
+}
+
+html.pgr-warp-diving #pgr-home-tunnel > div {
+    animation: pgr-tunnel-camera-dive 1120ms cubic-bezier(0.55, 0.04, 0.88, 0.28) forwards;
+    will-change: transform;
+}
+
+@keyframes pgr-tunnel-camera-dive {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+
+    100% {
+        transform: scale(2.65) rotate(32deg);
+    }
+}
+
+@keyframes pgr-warp-ring-rush {
+    0% {
+        opacity: 0;
+        transform: scale(0.12) rotate(var(--warp-rot, 0deg));
+    }
+
+    22% {
+        opacity: 0.96;
+    }
+
+    72% {
+        opacity: 0.85;
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(2.95) rotate(calc(var(--warp-rot, 0deg) + 64deg));
+    }
+}
+
+.pgr-warp-rush-ring {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    transform-origin: 50% 50%;
+    animation: pgr-warp-ring-rush 780ms cubic-bezier(0.45, 0.02, 0.86, 0.3) both;
+    will-change: transform, opacity;
+}
+
+@keyframes pgr-warp-diamond-pulse {
+    0% {
+        opacity: 0.95;
+        transform: translate(-50%, -50%) rotate(45deg) scale(0.35);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(135deg) scale(18);
+    }
+}
+
+.pgr-warp-shockwave {
+    position: fixed;
+    width: 28px;
+    height: 28px;
+    border: 1.5px solid #3b82f6;
+    box-shadow: 0 0 18px rgba(59, 130, 246, 0.55);
+    pointer-events: none;
+    z-index: 130;
+    animation: pgr-warp-diamond-pulse 680ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity;
+}
+
+.dark .pgr-warp-shockwave {
+    border-color: #f4f4f5;
+    box-shadow: 0 0 22px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes pgr-warp-portal-bloom {
+    0% {
+        opacity: 0;
+        transform: scale(0.25);
+    }
+
+    58% {
+        opacity: 0.28;
+        transform: scale(0.85);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(2.4);
+    }
+}
+
+.pgr-warp-portal-flash {
+    position: fixed;
+    inset: 0;
+    z-index: 125;
+    pointer-events: none;
+    transform-origin: var(--warp-cx, 50%) var(--warp-cy, 50%);
+    background: radial-gradient(circle at var(--warp-cx, 50%) var(--warp-cy, 50%),
+            rgba(255, 255, 255, 1) 0%,
+            rgba(224, 242, 254, 0.96) 28%,
+            rgba(255, 255, 255, 0.92) 68%,
+            #ffffff 100%);
+    animation: pgr-warp-portal-bloom 960ms cubic-bezier(0.65, 0, 0.9, 0.35) 140ms both;
+    will-change: transform, opacity;
+}
+
+.dark .pgr-warp-portal-flash {
+    background: radial-gradient(circle at var(--warp-cx, 50%) var(--warp-cy, 50%),
+            rgba(244, 244, 245, 0.92) 0%,
+            rgba(39, 42, 50, 0.96) 32%,
+            rgba(20, 21, 24, 0.98) 70%,
+            #141518 100%);
+}
+
+/* Efek keluar dari lorong saat tiba di halaman Admin Login / Console */
+@keyframes pgr-warp-arrive-fade {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes pgr-warp-emerge-body {
+    0% {
+        opacity: 0.2;
+        transform: scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.pgr-warp-arrive-curtain {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+    pointer-events: none;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.98) 0%, rgba(224, 242, 254, 0.94) 45%, #ffffff 100%);
+    animation: pgr-warp-arrive-fade 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.dark .pgr-warp-arrive-curtain {
+    background: radial-gradient(circle at 50% 50%, rgba(228, 228, 231, 0.85) 0%, rgba(26, 28, 33, 0.98) 48%, #141518 100%);
+}
+
+html.pgr-warp-arriving main {
+    animation: pgr-warp-emerge-body 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .pgr-click-ripple {
     position: fixed;
     width: 24px;
@@ -1184,6 +1372,44 @@ html.pgr-glitch-active *::after,
     height: 4px;
     opacity: 0;
     will-change: transform, opacity;
+}
+
+/* ==========================================================================
+   Tactical Modals: PGR Digital Glitch Materialize (Open) & Cut-Off (Close)
+   ========================================================================== */
+
+[data-pgr-modal][data-modal-state='closing'],
+[data-pgr-modal][data-modal-state='closing'] * {
+    pointer-events: none !important;
+}
+
+[data-pgr-modal][data-modal-state='opening'] *,
+[data-pgr-modal][data-modal-state='closing'] * {
+    transition: none !important;
+}
+
+[data-pgr-modal][data-modal-state='opening'] [data-pgr-modal-dialog],
+[data-pgr-modal][data-modal-state='closing'] [data-pgr-modal-dialog] {
+    will-change: transform, translate, clip-path, filter, opacity;
+}
+
+.pgr-modal-glitch-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pgr-modal-glitch-edge {
+    position: absolute;
+    inset: 0;
+    border: 1.5px solid rgba(5, 217, 232, 0.72);
+    box-shadow:
+        inset 0 0 18px rgba(5, 217, 232, 0.22),
+        inset 0 0 8px rgba(255, 42, 109, 0.25);
+    opacity: 0;
+    will-change: opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
